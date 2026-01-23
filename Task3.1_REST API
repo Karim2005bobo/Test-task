@@ -1,0 +1,88 @@
+Описание REST API интерфейса для метода «Register»														
+Метод: POST														
+URL: /api/v1/users/register														
+Входные параметры:														
+Наименование	Тип	Обязательность	Ограничения											
+firstName	    str.	  да	       Длина 2–50 символов, только буквенные символы и пробелы											
+lastName	    str.	  да	       Длина 2–50 символов, только буквенные символы и пробелы											
+userName	    str.	  да	       Длина 2–50 символов, допустимы числовые симловы											
+password	    str.	  да	       Длина 6–100 символов, должен содержать минимум 1 цифру, 1 заглавную и 1 строчную букву										captchaToken	boolean	да	       Токен, полученный от reCAPTCHA (длина ~200 символов)											
+														
+														
+Описание REST API интерфейса для метода «Register»														
+Метод: POST														
+URL: /api/v1/users/register														
+Выходные параметры при успешном ответе:														
+Наименование	Тип	Обязательность	Ограничения											
+UserID	      str.	да	        UUID-идентификатор пользователя											
+firstName	    str.	да	        Имя пользователя, как в изначальном запросе											
+lastName	    str.	да	        Фамилия пользователя, как в изначальном запросе											
+userName	    str.	да	        Никнейм пользователя, как в изначальном запросе											
+captchaToken	boolean	да	      Если success = true — пропускает дальше											
+status	      str.	да	        Статус аккаунта (ACTIVE)											
+														
+														
+Описание REST API интерфейса для метода «Register»														
+Метод: POST														
+URL: /api/v1/users/register														
+Выходные параметры с ошибкой:														
+Наименование	Тип	 Обязательность	Ограничения											
+errorCode	    int.	 да	           Код ошибки											
+errorMessage	str.	 да	           Текстовое описание ошибки											
+field	        str.	 да            Имя поля, вызвавшего ошибку 											
+														
+Ошибки: Клиент/Сервер														
+Клиентские ошибки														
+400 Bad Request	Некорректный формат запроса (например, отсутствуют обязательные поля, неверный формат логин, пароль)				
+409 Conflict	Пользователь уже зарегистрирован в системе													
+422 Unprocessable Entity	Пароли не совпадают, или не выполнены требования к паролю.													
+Серверные ошибки														
+500 Internal Server Error	Внутренняя ошибка сервера (как правило, ошибки могут быть локальные, сбой передачи API или сбой в БД)		503 Service Unavailable	Сервис временно недоступен (перегрузка сервера)													
+														
+JSON формат примера запроса POST /api/v1/users/register														
+"{
+  ""firstName"": ""Карим"",
+  ""lastName"": ""Хисамов"",
+  ""userName"": ""KarimKhisamov""
+  ""password"": ""QWERTY5002"",
+  ""captchaToken"": ""ready2YEp""
+  
+}"														
+														
+JSON формат пример ответа успешный сценарий POST /api/v1/users/register														
+"{
+  ""userId"": ""153e4517-e89b-65v3-a456-426614174219"",
+  ""firstName"": ""Карим"",
+  ""lastName"": ""Хисамов"",
+  ""userName"": ""KarimKhisamov""
+  ""status"": ""ACTIVE""
+}"														
+Для проверки каптчи отправляется запрос: "curl -X POST \
+  'https://www.google.com/recaptcha/api/siteverify' \
+  -d 'secret=секретный ключ(полученный при регистрации каптчи)&response=soTRuDnik2d.'"https://www.google.com/recaptcha/admin/create 
+  На этом сайте создаем Captcha				
+JSON результат:														
+"{
+  ""success"": true,
+  ""challenge_ts"": ""2025-11-21T10:00:00Z"",
+  ""hostname"": ""example.com""
+}"														
+														
+JSON формат пример ответа сценарий с ошибкой POST /api/v1/users/register														
+"{
+  ""errorCode"": 400,
+  ""errorMessage"": ""Пароль не соответсвует заданным параметрам"",
+  ""field"": ""WrongPassword""
+}"														
+														
+"{
+  ""errorCode"": 409,
+  ""errorMessage"": ""Пользователь уже зарегистрирован в системе"",
+  ""field"": ""userExist""
+}"														
+														
+"{
+  ""errorCode"": 400,
+  ""errorMessage"": ""Пожалуйста пройдите reCaptcha для регистрации"",
+  ""field"": ""reCaptcha""
+}"					
