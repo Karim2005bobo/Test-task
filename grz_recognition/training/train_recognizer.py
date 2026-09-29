@@ -145,6 +145,10 @@ def main():
             step += 1
             if step % 100 == 0:
                 print(f"ep {ep} step {step}/{steps} loss {loss.item():.4f} {(time.time() - t0) / (step - ep * len(tr)):.3f}s/it", flush=True)
+            if step % 200 == 0:
+                # промежуточный чекпойнт: переживает перезапуск машины посреди эпохи
+                torch.save({"model": model.state_dict(), "width": args.width, "epoch": ep, "step": step},
+                           os.path.join(args.out, "step.pt"))
             if args.max_steps and step >= args.max_steps:
                 break
         type_acc, seq_acc = evaluate(model, va)
