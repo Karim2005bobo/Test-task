@@ -19,9 +19,11 @@ API = "https://api.openverse.org/v1/images/"
 LIC_NAMES = {"by": "CC BY", "cc0": "CC0", "pdm": "Public domain"}
 
 
-def search(q, pages):
+def search(q, pages, source=None):
     for page in range(1, pages + 1):
         params = {"q": q, "license": "by,cc0,pdm", "page_size": 20, "page": page}
+        if source:
+            params["source"] = source
         url = API + "?" + urllib.parse.urlencode(params)
         for k in range(5):
             try:
@@ -43,10 +45,14 @@ def main():
     ap.add_argument("queries", nargs="+")
     ap.add_argument("--out", default="work/commons/candidates.jsonl")
     ap.add_argument("--pages", type=int, default=10)
+    ap.add_argument("--source", default=None, help="например flickr")
+    ap.add_argument("--seen", nargs="*", default=[], help="уже собранные JSONL (не дублировать)")
     args = ap.parse_args()
     seen = set()
-    if os.path.exists(args.out):
-        for line in open(args.out, encoding="utf-8"):
+    for path in [args.out] + args.seen:
+        if not os.path.exists(path):
+            continue
+        for line in open(path, encoding="utf-8"):
             d = json.loads(line)
             seen.add(d.get("url"))
             seen.add(d.get("page"))
@@ -54,7 +60,7 @@ def main():
     with open(args.out, "a", encoding="utf-8") as f:
         for q in args.queries:
             k = 0
-            for r in search(q, args.pages):
+            for r in search(q, args.pages, args.source):
                 if r["url"] in seen or r.get("foreign_landing_url") in seen:
                     continue
                 seen.add(r["url"])

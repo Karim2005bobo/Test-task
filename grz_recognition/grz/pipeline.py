@@ -68,7 +68,10 @@ class Pipeline:
         self.target_conf = target_conf
 
     def __call__(self, img):
-        dets = self.det(img)
+        return self.process(img, self.det(img))
+
+    def process(self, img, dets):
+        """Выпрямление, распознавание и постобработка найденных знаков."""
         if not dets:
             return []
         crops = []
