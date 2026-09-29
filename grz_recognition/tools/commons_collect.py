@@ -112,7 +112,7 @@ def _fetch(c, img_dir):
     for k in range(3):
         try:
             if wiki:
-                time.sleep(3.0)  # вежливая частота запросов к upload.wikimedia.org
+                time.sleep(10.0)  # вежливая частота запросов к upload.wikimedia.org
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             data = urllib.request.urlopen(req, timeout=30).read()
             with open(path, "wb") as f:
@@ -120,7 +120,7 @@ def _fetch(c, img_dir):
             return name, "ok"
         except Exception as e:  # noqa: BLE001
             err = str(e)
-            time.sleep(3 * (k + 1))
+            time.sleep(60 * (k + 1) if "429" in err else 3 * (k + 1))
     return name, "fail " + err
 
 

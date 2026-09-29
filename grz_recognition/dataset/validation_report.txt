@@ -1,5 +1,5 @@
 validate_dataset.py v1.0 — Волга-IT 2026, полуфинал, номинация «ИИ и анализ данных»
-Датасет: /home/user/work/ds_full
+Датасет: /home/user/Test-task/grz_recognition/dataset
 
 == Статистика ==
 Изображений: 5578 (реальных 578, синтетических 5000, без разметки в meta 0)
