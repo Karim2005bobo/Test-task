@@ -37,7 +37,9 @@ def main():
     ap.add_argument("--device", default=os.environ.get("GRZ_DEVICE", "auto"), choices=["auto", "cpu", "cuda"])
     ap.add_argument("--det-size", type=int, default=640, help="размер входа детектора")
     ap.add_argument("--det-conf", type=float, default=0.3)
-    ap.add_argument("--char-thr", type=float, default=0.35, help="порог уверенности символа, ниже – '#'")
+    ap.add_argument("--char-thr", type=float, default=0.0,
+                    help="порог уверенности символа, ниже – '#' (0 – всегда лучшая догадка: '#' в ответе "
+                         "засчитывается как ошибка)")
     ap.add_argument("--min-conf", type=float, default=0.25, help="минимальная уверенность для вывода знака")
     ap.add_argument("--no-other", action="store_true", help="не выводить знаки типа other")
     ap.add_argument("--vehicle-filter", action="store_true",

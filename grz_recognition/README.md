@@ -93,7 +93,7 @@ python training/export_onnx.py --rec work/rec/best.pt \
 ## Датасет
 
 ```bash
-bash dataset/generator/generate.sh                 # 5000 синтетических изображений, seed=2025
+python dataset/generator/generate.py               # 5000 синтетических изображений, seed=2025
 python tools/validate_dataset.py dataset --report dataset/validation_report.md
 python tools/annotate.py --src my_photos --dataset dataset   # разметка собственных фото
 ```

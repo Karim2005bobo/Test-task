@@ -47,8 +47,11 @@ def _rand_region(rng):
     return f"{r:02d}"
 
 
-def rand_ru_number(rng):
+def rand_ru_number(rng, plate_type="type1"):
+    """Случайный номер по маске типа: type1/1a – A123BC77(7), type1b – AB12377(7)."""
     L = list(RU_LETTERS)
+    if plate_type == "type1b":
+        return "".join(rng.choice(L, 2)) + "".join(rng.choice(list(DIGITS), 3)) + _rand_region(rng)
     return (rng.choice(L) + "".join(rng.choice(list(DIGITS), 3))
             + "".join(rng.choice(L, 2)) + _rand_region(rng))
 
@@ -158,7 +161,7 @@ def _screws(img, ppm, rng, pts_mm):
     if rng.random() < 0.5:
         return
     for x, y in pts_mm:
-        c = tuple(int(v) for v in rng.integers(90, 200, 3))
+        c = (int(rng.integers(90, 200)),) * 3
         cv2.circle(img, (int(x * ppm), int(y * ppm)), int(rng.uniform(3, 5) * ppm), c, -1, cv2.LINE_AA)
 
 
@@ -190,11 +193,18 @@ def render_type1(text, rng, ppm=2.0, yellow=False, style="stroke"):
     bg = _yellow(rng) if yellow else _white(rng)
     img, mask = _base((520, 112), ppm, bg, fg, rng)
     pt = Painter(img, ppm, fg, style, rng)
-    L1, D, L23, region = text[0], text[1:4], text[4:6], text[6:]
     lw, lh, dw, dh = 50, 58, 48, 76
     bottom = 96
-    items = [(L1, lw, lh, 0)] + [(c, dw, dh, 12 if i == 0 else 7) for i, c in enumerate(D)] \
-        + [(c, lw, lh, 12 if i == 0 else 7) for i, c in enumerate(L23)]
+    if yellow:
+        # тип 1Б: ЛЛ ЦЦЦ | регион
+        L12, D, region = text[:2], text[2:5], text[5:]
+        items = [(c, lw, lh, 0 if i == 0 else 8) for i, c in enumerate(L12)] \
+            + [(c, dw, dh, 16 if i == 0 else 8) for i, c in enumerate(D)]
+    else:
+        # тип 1: Л ЦЦЦ ЛЛ | регион
+        L1, D, L23, region = text[0], text[1:4], text[4:6], text[6:]
+        items = [(L1, lw, lh, 0)] + [(c, dw, dh, 12 if i == 0 else 7) for i, c in enumerate(D)] \
+            + [(c, lw, lh, 12 if i == 0 else 7) for i, c in enumerate(L23)]
     pt.row(items, 12, 382, bottom)
     sep = int(386 * ppm)
     cv2.line(img, (sep, int(4 * ppm)), (sep, int(108 * ppm)), fg, max(1, int(2 * ppm)))
@@ -324,7 +334,7 @@ def render_random(rng, ppm=2.0, type_probs=None, text=None):
     style = "stroke" if rng.random() < 0.75 else TTF_FONTS[int(rng.integers(0, len(TTF_FONTS)))]
     if t == "other":
         return render_other(rng.choice(OTHER_KINDS), rng, ppm, style)
-    text = text or rand_ru_number(rng)
+    text = text or rand_ru_number(rng, t)
     if t == "type1a":
         return render_type1a(text, rng, ppm, style)
     return render_type1(text, rng, ppm, yellow=(t == "type1b"), style=style)

@@ -21,7 +21,12 @@ import numpy as np
 FIELDS = ["image", "plate_num", "plate_type", "bbox", "quad", "is_vehicle", "is_synthetic", "source", "license", "conditions"]
 TYPES = {"type1", "type1a", "type1b", "other"}
 CONDITIONS = {"day", "night", "rain", "snow", "dirt", "glare", "motion_blur", "angle"}
-RU_RE = re.compile(r"^[ABEKMHOPCTYX#][\d#]{3}[ABEKMHOPCTYX#]{2}([\d#]{2}|[127#][\d#]{2})$")
+_L, _D = "[ABEKMHOPCTYX#]", "[0-9#]"
+TYPE_RE = {
+    "type1": re.compile(f"^{_L}{_D}{{3}}{_L}{{2}}{_D}{{2,3}}$"),
+    "type1a": re.compile(f"^{_L}{_D}{{3}}{_L}{{2}}{_D}{{2,3}}$"),
+    "type1b": re.compile(f"^{_L}{{2}}{_D}{{3}}{_D}{{2,3}}$"),
+}
 ANY_RE = re.compile(r"^[0-9A-Z#]{2,12}$")
 RECOMMENDED = {"type1a": (150, 50), "type1b": (300, 100), "other": (50, None)}
 
@@ -77,7 +82,7 @@ def main():
         if r["plate_type"] not in TYPES:
             e(f"недопустимый plate_type {r['plate_type']}")
         num = r["plate_num"]
-        if r["plate_type"] != "other" and not RU_RE.match(num):
+        if r["plate_type"] in TYPE_RE and not TYPE_RE[r["plate_type"]].match(num):
             e(f"номер {num} не соответствует маске")
         if r["plate_type"] == "other" and not ANY_RE.match(num):
             e(f"номер other {num}: допустимы 0-9, A-Z, #")
@@ -114,7 +119,10 @@ def main():
         if not os.path.isfile(lp):
             errors.append(f"нет разметки labels/{stem}.txt")
             continue
-        n = sum(1 for line in open(lp) if line.strip())
+        lines_ = [line.split() for line in open(lp) if line.strip()]
+        n = len(lines_)
+        if any(len(t) not in (5, 13) for t in lines_):
+            errors.append(f"labels/{stem}.txt: ожидается 5 или 13 чисел в строке")
         if n != len(rs):
             errors.append(f"labels/{stem}.txt: {n} строк, в meta.csv {len(rs)}")
     listed = set(per_image)

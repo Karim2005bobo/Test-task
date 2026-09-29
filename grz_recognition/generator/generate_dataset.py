@@ -42,14 +42,19 @@ def _init(args):
     _POOL = scenes.BackgroundPool(args.carparts, args.coco)
 
 
-def yolo_line(cls, quad, W, H):
-    q = np.asarray(quad, np.float32)
+def yolo_line(cls, quad, W, H, visibility=False):
+    """YOLO: class cx cy w h x1 y1 ... x4 y4 (нормировано в [0, 1]).
+
+    visibility=True добавляет флаг видимости к каждой точке (формат Ultralytics
+    pose с kpt_shape [4, 3]) – только для обучающей выборки детектора.
+    """
+    q = np.clip(np.asarray(quad, np.float64), 0, [W - 1, H - 1])
     x0, y0 = q.min(0)
     x1, y1 = q.max(0)
-    vals = [(x0 + x1) / 2 / W, (y0 + y1) / 2 / H, (x1 - x0) / W, (y1 - y0) / H]
+    vals = [f"{(x0 + x1) / 2 / W:.6f}", f"{(y0 + y1) / 2 / H:.6f}", f"{(x1 - x0) / W:.6f}", f"{(y1 - y0) / H:.6f}"]
     for x, y in q:
-        vals += [x / W, y / H, 2]
-    return f"{cls} " + " ".join(f"{v:.6f}" if isinstance(v, float) or isinstance(v, np.floating) else str(v) for v in vals)
+        vals += [f"{x / W:.6f}", f"{y / H:.6f}"] + (["2"] if visibility else [])
+    return f"{cls} " + " ".join(vals)
 
 
 def _one(i):
@@ -67,7 +72,7 @@ def _one(i):
                     [cv2.IMWRITE_JPEG_QUALITY, int(rng.integers(55, 95))])
         with open(os.path.join(args.out, "labels", split, name + ".txt"), "w") as f:
             for a in anns:
-                f.write(yolo_line(int(a["two_line"]), a["quad"], W, H) + "\n")
+                f.write(yolo_line(int(a["two_line"]), a["quad"], W, H, visibility=True) + "\n")
         return []
     name = f"syn_{i:06d}"
     rel = f"images/synthetic/{name}.jpg"

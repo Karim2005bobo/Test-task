@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from grz.detector import PlateDetector, VehicleDetector
-from grz.plate_format import MASK_8, MASK_9, PLATE_TYPES, TO_DIGIT, TO_LETTER, allowed_chars
+from grz.plate_format import MASKS, PLATE_TYPES, TO_DIGIT, TO_LETTER, allowed_chars
 from grz.recognizer import Recognizer, decode_ru, greedy_with_conf
 from grz.rectify import order_quad, rectify, to_tensor
 
@@ -37,9 +37,9 @@ def providers_for(device):
     return ["CPUExecutionProvider"]
 
 
-def _fix_by_mask(s):
+def _fix_by_mask(s, plate_type):
     """Позиционная замена похожих символов; None, если строку нельзя привести к маске."""
-    for mask in (MASK_8, MASK_9):
+    for mask in MASKS[plate_type]:
         if len(s) != len(mask):
             continue
         out = []
@@ -57,7 +57,7 @@ def _fix_by_mask(s):
 
 class Pipeline:
     def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=640, det_conf=0.3,
-                 char_thr=0.35, emit_other=True, vehicle_filter=False, min_conf=0.25):
+                 char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25):
         prov = providers_for(device)
         self.det = PlateDetector(os.path.join(weights_dir, "detector.onnx"), prov, det_size, det_conf)
         self.rec = Recognizer(os.path.join(weights_dir, "recognizer.onnx"), prov)
@@ -94,9 +94,9 @@ class Pipeline:
                 text, confs, _ = greedy_with_conf(p)
             else:
                 text, confs, _ = greedy_with_conf(p)
-                fixed = _fix_by_mask(text)
+                fixed = _fix_by_mask(text, ptype)
                 if fixed is None:
-                    text, confs, _ = decode_ru(p)
+                    text, confs, _ = decode_ru(p, ptype)
                 else:
                     text = fixed
             if not text:

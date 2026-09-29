@@ -3,14 +3,14 @@
 Декодирование в два шага:
   1. жадное (без ограничений) – используется для «прочих» знаков;
   2. Витерби по решётке CTC, ограниченной маской номера РФ
-     (L DDD LL DD[D]) – для типов 1/1А/1Б. Ограниченный поиск сам исправляет
+     (L DDD LL DD[D] для типов 1/1А, LL DDD DD[D] для 1Б). Ограниченный поиск сам исправляет
      типичные путаницы O/0, B/8 и т.п., так как запрещает буквы на местах цифр
      и наоборот, а также неверную первую цифру трёхзначного региона.
 Символы с низкой уверенностью заменяются на '#', как в эталонной разметке.
 """
 import numpy as np
 
-from grz.plate_format import BLANK, CHAR2IDX, IDX2CHAR, MASK_8, MASK_9, allowed_chars
+from grz.plate_format import BLANK, CHAR2IDX, IDX2CHAR, MASKS, allowed_chars
 
 NEG = -1e9
 _ALLOWED = {m: np.array([CHAR2IDX[c] for c in allowed_chars(m)]) for m in "LDR"}
@@ -134,11 +134,11 @@ def _compress(p, thr=0.995):
     return p[keep]
 
 
-def decode_ru(p):
-    """Лучшая из масок 8 и 9 символов для номера РФ."""
+def decode_ru(p, plate_type="type1"):
+    """Лучшая из масок типа (с 2- и 3-значным регионом)."""
     p = _compress(p)
     best = None
-    for mask in (MASK_8, MASK_9):
+    for mask in MASKS[plate_type]:
         r = constrained_decode(p, mask)
         if best is None or r[2] > best[2]:
             best = r

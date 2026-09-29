@@ -42,7 +42,7 @@ def add_real(dataset_dir, det_dir, val_every=5):
                 wq = (np.linalg.norm(q[1] - q[0]) + np.linalg.norm(q[2] - q[3])) / 2
                 hq = (np.linalg.norm(q[3] - q[0]) + np.linalg.norm(q[2] - q[1])) / 2
                 two = r["plate_type"] == "type1a" or (r["plate_type"] == "other" and wq / max(hq, 1) < 2.6)
-                f.write(yolo_line(int(two), q, W, H) + "\n")
+                f.write(yolo_line(int(two), q, W, H, visibility=True) + "\n")
     print("real images added:", len(rows))
 
 
