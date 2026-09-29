@@ -9,8 +9,8 @@ python tools/annotate.py --src my_photos/ --dataset ../dataset --source own_phot
   n – следующее изображение (сохранить), u – отменить последний знак,
   b – размыть область (лицо) прямоугольником из двух кликов, q – выход.
 Изображение копируется в images/real/ (с размытыми лицами), разметка
-дописывается в labels/ и meta.csv. Предложенные автодетектором лиц области
-(Haar, из состава OpenCV) размываются автоматически и подсвечиваются.
+дописывается в labels/ и meta.csv. Лица, найденные детектором YuNet
+(tools/faces.py), размываются автоматически.
 """
 import argparse
 import csv
@@ -25,17 +25,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from generator.generate_dataset import META_FIELDS, yolo_line  # noqa: E402
 from grz.plate_format import TYPE2IDX  # noqa: E402
 from grz.rectify import order_quad  # noqa: E402
+from tools.faces import blur_faces  # noqa: E402
 
 TYPES = {"1": "type1", "1a": "type1a", "1b": "type1b", "o": "other"}
-
-
-def blur_faces(img):
-    casc = cv2.CascadeClassifier(os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml"))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = casc.detectMultiScale(gray, 1.1, 5, minSize=(20, 20))
-    for x, y, w, h in faces:
-        blur_rect(img, x, y, w, h)
-    return len(faces)
 
 
 def blur_rect(img, x, y, w, h):
