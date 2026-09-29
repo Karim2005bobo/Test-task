@@ -24,7 +24,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from generator.generate_dataset import META_FIELDS, yolo_line  # noqa: E402
+from generator.generate_dataset import META_FIELDS, bbox_from_quad, yolo_line  # noqa: E402
 from grz.plate_format import TYPE2IDX  # noqa: E402
 from grz.rectify import order_quad  # noqa: E402
 from tools.faces import blur_faces  # noqa: E402
@@ -90,7 +90,7 @@ def main():
             x1, y1 = q.max(0)
             new.append({
                 "image": f"images/real/{name}", "plate_num": rv["text"], "plate_type": rv["type"],
-                "bbox": f"{int(round(x0))},{int(round(y0))},{int(round(x1 - x0))},{int(round(y1 - y0))}",
+                "bbox": bbox_from_quad(q),
                 "quad": ",".join(str(int(round(t))) for t in q.reshape(-1)),
                 "is_vehicle": rv.get("is_vehicle", 1), "is_synthetic": 0,
                 "source": f"{c.get('page', src)} (автор: {c.get('artist', '?')[:80]}) | разметка: предразметка "

@@ -41,7 +41,7 @@ def main():
                     help="порог уверенности символа, ниже – '#' (0 – всегда лучшая догадка: '#' в ответе "
                          "засчитывается как ошибка)")
     ap.add_argument("--min-conf", type=float, default=0.25, help="минимальная уверенность для вывода знака")
-    ap.add_argument("--target-conf", type=float, default=0.65,
+    ap.add_argument("--target-conf", type=float, default=0.55,
                     help="знаки целевых типов с уверенностью ниже порога выводятся как other")
     ap.add_argument("--no-other", action="store_true", help="не выводить знаки типа other")
     ap.add_argument("--vehicle-filter", action="store_true",

@@ -51,7 +51,7 @@ def _fix_by_mask(s, plate_type):
 class Pipeline:
     def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=640, det_conf=0.3,
                  char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25,
-                 max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25, target_conf=0.65):
+                 max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25, target_conf=0.55):
         prov = providers_for(device)
         self.det = PlateDetector(os.path.join(weights_dir, "detector.onnx"), prov, det_size, det_conf)
         self.rec = Recognizer(os.path.join(weights_dir, "recognizer.onnx"), prov)

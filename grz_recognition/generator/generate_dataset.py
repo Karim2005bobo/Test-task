@@ -42,6 +42,14 @@ def _init(args):
     _POOL = scenes.BackgroundPool(args.carparts, args.coco)
 
 
+def bbox_from_quad(q):
+    """bbox x,y,w,h, описывающий quad после округления до целых (как он записан в meta.csv)."""
+    qi = np.round(np.asarray(q, np.float64)).astype(int)
+    x0, y0 = qi.min(0)
+    x1, y1 = qi.max(0)
+    return f"{x0},{y0},{x1 - x0},{y1 - y0}"
+
+
 def yolo_line(cls, quad, W, H, visibility=False):
     """YOLO: class cx cy w h x1 y1 ... x4 y4 (нормировано в [0, 1]).
 
@@ -88,7 +96,7 @@ def _one(i):
                 "image": rel,
                 "plate_num": a["text"],
                 "plate_type": a["plate_type"],
-                "bbox": f"{int(round(x0))},{int(round(y0))},{int(round(x1 - x0))},{int(round(y1 - y0))}",
+                "bbox": bbox_from_quad(q),
                 "quad": ",".join(str(int(round(v))) for v in q.reshape(-1)),
                 "is_vehicle": a["is_vehicle"],
                 "is_synthetic": 1,
