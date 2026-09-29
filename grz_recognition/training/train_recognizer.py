@@ -20,6 +20,19 @@ from grz.recognizer import greedy_decode  # noqa: E402
 from training.model import PlateNet  # noqa: E402
 
 
+class ConcatX:
+    """Индексация по нескольким memmap-массивам как по одному."""
+
+    def __init__(self, parts):
+        self.parts = parts
+
+    def __getitem__(self, i):
+        for X, a, b in self.parts:
+            if a <= i < b:
+                return X[i - a]
+        raise IndexError(i)
+
+
 class CropDataset(Dataset):
     def __init__(self, X, labels, idx, train):
         self.X, self.labels, self.idx, self.train = X, labels, idx, train
@@ -40,8 +53,6 @@ class CropDataset(Dataset):
                 img = cv2.warpAffine(img, M, (w, h), borderMode=cv2.BORDER_REPLICATE)
             if rng.rand() < 0.5:
                 img = np.clip(img.astype(np.float32) * rng.uniform(0.7, 1.3) + rng.uniform(-25, 25), 0, 255).astype(np.uint8)
-            if rng.rand() < 0.1:
-                img = 255 - img if t == 4 else img  # инверсия только для негативов
         x = torch.from_numpy(img.astype(np.float32) / 127.5 - 1.0).permute(2, 0, 1)
         return x, torch.tensor(encode(text), dtype=torch.long), t, text
 
@@ -63,6 +74,8 @@ def evaluate(model, loader):
             pred = greedy_decode(lc.softmax(-1).permute(1, 0, 2).numpy())
             pt = lt.argmax(1).numpy()
             for p, gt, tt, ptt in zip(pred, texts, t.numpy(), pt):
+                if tt < 0:
+                    continue
                 n += 1
                 tok += int(tt == ptt)
                 if tt < 4:
@@ -76,7 +89,7 @@ def evaluate(model, loader):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", required=True)
+    ap.add_argument("--data", required=True, nargs="+")
     ap.add_argument("--out", required=True)
     ap.add_argument("--epochs", type=int, default=12)
     ap.add_argument("--bs", type=int, default=128)
@@ -91,11 +104,16 @@ def main():
     np.random.seed(0)
     os.makedirs(args.out, exist_ok=True)
 
-    X = np.load(os.path.join(args.data, "X.npy"), mmap_mode="r")
-    labels = []
-    for line in open(os.path.join(args.data, "y.tsv")):
-        text, t, _syn = line.rstrip("\n").split("\t")
-        labels.append((text, int(t)))
+    # несколько каталогов данных склеиваются (синтетика + реальные кропы)
+    Xs, labels = [], []
+    for d in args.data:
+        X = np.load(os.path.join(d, "X.npy"), mmap_mode="r")
+        n0 = len(labels)
+        for line in open(os.path.join(d, "y.tsv")):
+            text, t, _syn = line.rstrip("\n").split("\t")
+            labels.append((text, int(t)))
+        Xs.append((X, n0, len(labels)))
+    X = ConcatX(Xs)
     N = len(labels)
     perm = np.random.RandomState(0).permutation(N)
     nval = min(3000, N // 30)
@@ -118,7 +136,7 @@ def main():
             lc, lt = model(x)
             logp = lc.log_softmax(-1)
             T = torch.full((x.shape[0],), logp.shape[0], dtype=torch.long)
-            loss = ctc(logp, y, T, ylen) + 0.5 * F.cross_entropy(lt, t, label_smoothing=0.05)
+            loss = ctc(logp, y, T, ylen) + 0.5 * F.cross_entropy(lt, t, label_smoothing=0.05, ignore_index=-1)
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
