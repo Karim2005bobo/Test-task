@@ -46,6 +46,18 @@ def file_name(c):
     return "wc_" + re.sub(r"[^\w.-]+", "_", c["title"][5:])[:120]
 
 
+def _iou(a, b):
+    a, b = np.array(a), np.array(b)
+    ax0, ay0 = a.min(0)
+    ax1, ay1 = a.max(0)
+    bx0, by0 = b.min(0)
+    bx1, by1 = b.max(0)
+    iw = max(0.0, min(ax1, bx1) - max(ax0, bx0))
+    ih = max(0.0, min(ay1, by1) - max(ay0, by0))
+    inter = iw * ih
+    return inter / max((ax1 - ax0) * (ay1 - ay0) + (bx1 - bx0) * (by1 - by0) - inter, 1e-6)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review", required=True)
@@ -65,7 +77,11 @@ def main():
     by_img = {}
     for rv in review:
         p = pre[rv["id"]]
-        by_img.setdefault(p["image"], []).append((p, rv))
+        items = by_img.setdefault(p["image"], [])
+        # одна и та же табличка, найденная дважды в одном кадре, – одна строка разметки
+        if any(_iou(p["quad"], q["quad"]) > 0.3 for q, _ in items):
+            continue
+        items.append((p, rv))
 
     meta = os.path.join(args.dataset, "meta.csv")
     with open(meta, encoding="utf-8") as f:
