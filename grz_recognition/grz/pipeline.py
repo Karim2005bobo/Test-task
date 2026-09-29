@@ -161,6 +161,10 @@ def _on_vehicle(quad, vboxes):
 
 def imread(path):
     """Чтение с поддержкой не-ASCII путей (Windows)."""
-    data = np.fromfile(path, np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_COLOR)
-    return img
+    try:
+        data = np.fromfile(path, np.uint8)
+        if data.size == 0:
+            return None
+        return cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except (OSError, cv2.error):
+        return None

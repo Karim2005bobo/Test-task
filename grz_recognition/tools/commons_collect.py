@@ -107,12 +107,12 @@ def _fetch(c, img_dir):
     path = os.path.join(img_dir, name)
     if os.path.exists(path):
         return name, "exists"
-    url = c["url"].replace("/2048px-", "/1920px-")  # стандартный размер превью Wikimedia
+    url = c["url"].replace("/2048px-", "/1280px-")  # стандартный размер превью Wikimedia
     wiki = "wikimedia.org" in url
     for k in range(3):
         try:
             if wiki:
-                time.sleep(2.0)  # вежливая частота запросов к upload.wikimedia.org
+                time.sleep(3.0)  # вежливая частота запросов к upload.wikimedia.org
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             data = urllib.request.urlopen(req, timeout=30).read()
             with open(path, "wb") as f:
