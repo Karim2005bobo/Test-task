@@ -23,21 +23,22 @@ TYPE2IDX = {t: i for i, t in enumerate(PLATE_TYPES)}
 # Маски (ГОСТ Р 50577-2018, формат организаторов):
 #   type1, type1a: Л ЦЦЦ ЛЛ + регион (A123BC77, A123BC777)
 #   type1b:        ЛЛ ЦЦЦ + регион   (AB12377, AB123777) – такси/пассажирские
-# Регион: 2 цифры или 3 цифры, начинающиеся с 1/2/7.
+# Регион: 2 или 3 цифры. В ТЗ сказано, что трёхзначные коды начинаются с 1/2/7,
+# но реально выданы и другие (550 – Омская обл., 323 – Бурятия, 763 – Самарская
+# обл.), они есть в эталоне организаторов; маска их evaluate.py – любые 2-3 цифры.
 _L = "[ABEKMHOPCTYX]"
-_REG = r"(\d{2}|[127]\d{2})"
+_REG = r"\d{2,3}"
 PLATE_RE = {
     "type1": re.compile(rf"^{_L}\d{{3}}{_L}{{2}}{_REG}$"),
     "type1a": re.compile(rf"^{_L}\d{{3}}{_L}{{2}}{_REG}$"),
     "type1b": re.compile(rf"^{_L}{{2}}\d{{3}}{_REG}$"),
 }
 
-# Маски по позициям: 'L' – буква серии, 'D' – цифра, 'R' – первая цифра
-# трёхзначного кода региона (только 1, 2, 7).
+# Маски по позициям: 'L' – буква серии, 'D' – цифра.
 MASKS = {
-    "type1": ("LDDDLLDD", "LDDDLLRDD"),
-    "type1a": ("LDDDLLDD", "LDDDLLRDD"),
-    "type1b": ("LLDDDDD", "LLDDDRDD"),
+    "type1": ("LDDDLLDD", "LDDDLLDDD"),
+    "type1a": ("LDDDLLDD", "LDDDLLDDD"),
+    "type1b": ("LLDDDDD", "LLDDDDDD"),
 }
 
 # Визуально похожие символы: используются при восстановлении номера по маске.
@@ -54,8 +55,6 @@ def is_valid(num: str, plate_type: str) -> bool:
 def allowed_chars(mask_char: str) -> str:
     if mask_char == "L":
         return RU_LETTERS
-    if mask_char == "R":
-        return "127"
     return DIGITS
 
 

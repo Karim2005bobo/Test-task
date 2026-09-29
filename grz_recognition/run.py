@@ -41,6 +41,8 @@ def main():
                     help="порог уверенности символа, ниже – '#' (0 – всегда лучшая догадка: '#' в ответе "
                          "засчитывается как ошибка)")
     ap.add_argument("--min-conf", type=float, default=0.25, help="минимальная уверенность для вывода знака")
+    ap.add_argument("--target-conf", type=float, default=0.65,
+                    help="знаки целевых типов с уверенностью ниже порога выводятся как other")
     ap.add_argument("--no-other", action="store_true", help="не выводить знаки типа other")
     ap.add_argument("--vehicle-filter", action="store_true",
                     help="понижать уверенность знаков вне ТС (доп. детектор ТС, +~15 мс)")
@@ -55,7 +57,8 @@ def main():
         ap.error("укажите существующий каталог --input (или GRZ_INPUT)")
 
     pipe = Pipeline(args.weights, args.device, args.det_size, args.det_conf, args.char_thr,
-                    emit_other=not args.no_other, vehicle_filter=args.vehicle_filter, min_conf=args.min_conf)
+                    emit_other=not args.no_other, vehicle_filter=args.vehicle_filter, min_conf=args.min_conf,
+                    target_conf=args.target_conf)
     files = sorted(f for f in os.listdir(args.input) if os.path.splitext(f)[1].lower() in EXTS)
     # прогрев (инициализация CUDA/графа не входит в замер)
     if files:

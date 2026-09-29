@@ -13,7 +13,7 @@ import numpy as np
 from grz.plate_format import BLANK, CHAR2IDX, IDX2CHAR, MASKS, allowed_chars
 
 NEG = -1e9
-_ALLOWED = {m: np.array([CHAR2IDX[c] for c in allowed_chars(m)]) for m in "LDR"}
+_ALLOWED = {m: np.array([CHAR2IDX[c] for c in allowed_chars(m)]) for m in "LD"}
 
 
 def greedy_decode(probs):

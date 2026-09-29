@@ -51,13 +51,14 @@ def _fix_by_mask(s, plate_type):
 class Pipeline:
     def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=640, det_conf=0.3,
                  char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25,
-                 max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25):
+                 max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25, target_conf=0.65):
         prov = providers_for(device)
         self.det = PlateDetector(os.path.join(weights_dir, "detector.onnx"), prov, det_size, det_conf)
         self.rec = Recognizer(os.path.join(weights_dir, "recognizer.onnx"), prov)
         self.veh = VehicleDetector(os.path.join(weights_dir, "vehicle.onnx"), prov) if vehicle_filter else None
         self.char_thr, self.emit_other, self.min_conf = char_thr, emit_other, min_conf
         self.max_gap, self.min_char_conf, self.yellow_thr = max_gap, min_char_conf, yellow_thr
+        self.target_conf = target_conf
 
     def __call__(self, img):
         dets = self.det(img)
@@ -83,6 +84,10 @@ class Pipeline:
             text, ptype, conf = r
             if vboxes is not None and not _on_vehicle(d.quad, vboxes):
                 conf *= 0.3
+            if ptype != "other" and conf < self.target_conf:
+                # неуверенный знак выдаём как other: такие строки не штрафуются,
+                # а ложное «прочтение» эмблемы/надписи как type1 – штрафуется
+                ptype = "other"
             if conf < self.min_conf:
                 continue
             if ptype == "other" and not self.emit_other:

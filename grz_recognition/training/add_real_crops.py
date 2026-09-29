@@ -10,12 +10,22 @@
     отличается от однострочной, поэтому метка типа для неё не задаётся (-1):
     пример учит только чтение символов (CTC) на реальных текстурах.
 
+Второй источник (--options): AUTO.RIA Numberplate Options Dataset (CC BY 4.0) –
+кропы знаков с атрибутами «страна/тип» (region_id) и числом строк:
+  * РФ, 2 строки, текст по маске 1А          -> type1a (с повторами и шумом);
+  * РФ, 2 строки, иной текст (мото, прицепы) -> other;
+  * РФ, 1 строка                             -> type1;
+  * военные РФ и другие страны               -> other;
+  * «мусор» (count_lines = 0)                -> «не знак».
+
 python training/add_real_crops.py --src work/nomeroff/ocr_ru --out work/ocr_real --n1 30000 --n1a 10000
+python training/add_real_crops.py --options work/nomeroff/opts --out work/ocr_opts
 """
 import argparse
 import glob
 import json
 import os
+import re
 import sys
 
 import cv2
@@ -54,15 +64,79 @@ def pseudo_1a(img, rng):
                       cv2.resize(bottom, (half, OCR_H), interpolation=cv2.INTER_AREA)])
 
 
+# region_id Options-датасета (nomeroff_net CLASS_REGION_ALL)
+RU, RU_MILITARY, GARBAGE = "6", "16", "0"
+ALNUM = re.compile(r"^[0-9A-Z]{3,12}$")
+
+
+def whole_quad(img):
+    h, w = img.shape[:2]
+    return np.float32([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
+
+
+def options_crops(root, rng, rep_1a=6, max_other=6000, max_garbage=5000, max_ru1=3000):
+    """Кропы из Options-датасета -> список (лента 224x48, текст, класс)."""
+    from grz.rectify import rectify
+    anns = sorted(glob.glob(os.path.join(root, "**", "ann", "*.json"), recursive=True))
+    rng.shuffle(anns)
+    out, n_other, n_garbage, n_ru1 = [], 0, 0, 0
+    for a in anns:
+        d = json.load(open(a))
+        reg, lines = str(d.get("region_id")), str(d.get("count_lines"))
+        text = str(d.get("description", "")).upper()
+        img_path = a.replace(os.sep + "ann" + os.sep, os.sep + "img" + os.sep)[:-5] + ".png"
+        if reg == GARBAGE or lines == "0":
+            if n_garbage >= max_garbage:
+                continue
+            kind, reps = ("", 4), 1
+            n_garbage += 1
+        elif lines not in ("1", "2") or not ALNUM.match(text):
+            continue
+        elif reg == RU and lines == "2" and PLATE_RE["type1a"].match(text):
+            kind, reps = (text, 1), rep_1a
+        elif reg == RU and lines == "1" and PLATE_RE["type1"].match(text):
+            if n_ru1 >= max_ru1:
+                continue
+            kind, reps = (text, 0), 1
+            n_ru1 += 1
+        else:
+            if n_other >= max_other and not (reg == RU and lines == "2"):
+                continue
+            kind, reps = (text, 3), 2 if (reg == RU and lines == "2") else 1
+            n_other += 1
+        img = cv2.imread(img_path)
+        if img is None or min(img.shape[:2]) < 12:
+            continue
+        for _ in range(reps):
+            q = whole_quad(img)
+            q = q + rng.normal(0, 0.02, q.shape).astype(np.float32) * [img.shape[1], img.shape[0]]
+            out.append((rectify(img, q, lines == "2", pad=rng.uniform(-0.02, 0.05)), kind[0], kind[1]))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", required=True)
+    ap.add_argument("--src", default=None)
+    ap.add_argument("--options", default=None)
     ap.add_argument("--out", required=True)
     ap.add_argument("--n1", type=int, default=30000)
     ap.add_argument("--n1a", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=5)
     args = ap.parse_args()
     rng = np.random.default_rng(args.seed)
+    if args.options:
+        crops = options_crops(args.options, rng)
+        os.makedirs(args.out, exist_ok=True)
+        X = np.lib.format.open_memmap(os.path.join(args.out, "X.npy"), mode="w+", dtype=np.uint8,
+                                      shape=(len(crops), OCR_H, OCR_W, 3))
+        with open(os.path.join(args.out, "y.tsv"), "w") as f:
+            for i, (c, text, t) in enumerate(crops):
+                X[i] = c
+                f.write(f"{text}\t{t}\t0\n")
+        X.flush()
+        from collections import Counter
+        print("options crops:", len(crops), Counter(t for _, _, t in crops))
+        return
     anns = sorted(glob.glob(os.path.join(args.src, "**", "train", "ann", "*.json"), recursive=True))
     items = []
     for a in anns:
