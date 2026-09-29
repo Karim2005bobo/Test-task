@@ -6,18 +6,11 @@ import cv2
 import numpy as np
 
 from grz.detector import PlateDetector, VehicleDetector
-from grz.plate_format import MASKS, PLATE_TYPES, TO_DIGIT, TO_LETTER, allowed_chars
+from grz.plate_format import MASKS, TO_DIGIT, TO_LETTER, allowed_chars
 from grz.recognizer import Recognizer, decode_ru, greedy_with_conf
 from grz.rectify import order_quad, rectify, to_tensor
 
 WEIGHTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "weights")
-
-# Совместимость «компоновка детектора» -> тип знака (type1, type1a, type1b, other, none)
-LAYOUT_PRIOR = {
-    0: np.array([1.0, 0.05, 1.0, 1.0, 1.0]),   # однострочный
-    1: np.array([0.05, 1.0, 0.05, 1.0, 1.0]),  # двухстрочный
-}
-
 
 @dataclass
 class PlateResult:
@@ -57,12 +50,14 @@ def _fix_by_mask(s, plate_type):
 
 class Pipeline:
     def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=640, det_conf=0.3,
-                 char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25):
+                 char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25,
+                 max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25):
         prov = providers_for(device)
         self.det = PlateDetector(os.path.join(weights_dir, "detector.onnx"), prov, det_size, det_conf)
         self.rec = Recognizer(os.path.join(weights_dir, "recognizer.onnx"), prov)
         self.veh = VehicleDetector(os.path.join(weights_dir, "vehicle.onnx"), prov) if vehicle_filter else None
         self.char_thr, self.emit_other, self.min_conf = char_thr, emit_other, min_conf
+        self.max_gap, self.min_char_conf, self.yellow_thr = max_gap, min_char_conf, yellow_thr
 
     def __call__(self, img):
         dets = self.det(img)
@@ -81,35 +76,73 @@ class Pipeline:
         ctc, cls = self.rec(to_tensor(crops))
         vboxes = self.veh(img) if self.veh is not None else None
         results = []
-        for d, p, tp in zip(dets, ctc, cls):
-            tp = tp * LAYOUT_PRIOR[d.layout]
-            tp = tp / tp.sum()
-            t = int(tp.argmax())
-            if t == 4:           # «не знак» – ложная детекция
+        for d, p, tp, crop in zip(dets, ctc, cls, crops):
+            r = self.decide(d, p, tp, crop)
+            if r is None:
                 continue
-            ptype = PLATE_TYPES[t]
-            if ptype == "other":
-                if not self.emit_other:
-                    continue
-                text, confs, _ = greedy_with_conf(p)
-            else:
-                text, confs, _ = greedy_with_conf(p)
-                fixed = _fix_by_mask(text, ptype)
-                if fixed is None:
-                    text, confs, _ = decode_ru(p, ptype)
-                else:
-                    text = fixed
-            if not text:
-                continue
-            text = "".join(c if cf >= self.char_thr else "#" for c, cf in zip(text, confs))
-            char_conf = float(np.mean(confs)) if confs else 0.0
-            conf = float(np.clip((d.score * tp[t] * char_conf) ** (1 / 3), 0, 1))
+            text, ptype, conf = r
             if vboxes is not None and not _on_vehicle(d.quad, vboxes):
                 conf *= 0.3
             if conf < self.min_conf:
                 continue
+            if ptype == "other" and not self.emit_other:
+                continue
             results.append(PlateResult(text, ptype, conf, d.quad))
         return results
+
+    def decide(self, d, p, tp, crop):
+        """Выбор типа и текста знака.
+
+        Тип определяется совместно: компоновка от детектора (1 или 2 строки),
+        цвет фона (жёлтый – только 1Б), соответствие прочитанного текста маске
+        типа и уверенность распознавателя. Мерой соответствия маске служит
+        «цена» маски: насколько лучший путь CTC, удовлетворяющий маске, хуже
+        лучшего пути без ограничений (в натах). Знак, текст которого не
+        укладывается ни в одну маску целевых типов, получает тип other – такие
+        строки не штрафуются при проверке и не выдаются за целевые.
+        """
+        if tp[4] > 0.9 and tp[4] > 3 * max(tp[:4]):
+            return None                                   # уверенно «не знак»
+        g_text, g_confs, g_score = greedy_with_conf(p)
+        yellow = yellow_fraction(crop)
+        if d.layout == 1:
+            cands = ["type1a"]
+        elif yellow >= self.yellow_thr:
+            cands = ["type1b"]
+        else:
+            cands = ["type1"]
+        best = None
+        for ptype in cands:
+            fixed = _fix_by_mask(g_text, ptype)
+            if fixed is not None:
+                text, confs, gap = fixed, g_confs, float(sum(fx != gx for fx, gx in zip(fixed, g_text)))
+            else:
+                r = decode_ru(p, ptype)
+                if r is None:
+                    continue
+                text, confs, s = r
+                gap = max(0.0, g_score - s)
+            if best is None or gap < best[3]:
+                best = (text, confs, ptype, gap)
+        char_conf = float(np.mean(g_confs)) if g_confs else 0.0
+        if best is not None and best[3] <= self.max_gap:
+            text, confs, ptype, gap = best
+            char_conf = float(np.mean(confs))
+            if char_conf >= self.min_char_conf:
+                text = "".join(c if cf >= self.char_thr else "#" for c, cf in zip(text, confs))
+                conf = float(np.clip(d.score ** 0.3 * char_conf ** 0.7 * np.exp(-0.1 * gap), 0, 1))
+                return text, ptype, conf
+        if not g_text:
+            return None
+        return g_text, "other", float(np.clip(d.score ** 0.3 * char_conf ** 0.7, 0, 1))
+
+
+def yellow_fraction(crop):
+    """Доля «жёлтых» пикселей фона знака (тип 1Б)."""
+    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    m = (h >= 12) & (h <= 38) & (s >= 70) & (v >= 60)
+    return float(m.mean())
 
 
 def _on_vehicle(quad, vboxes):

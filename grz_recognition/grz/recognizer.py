@@ -119,6 +119,8 @@ def constrained_decode(p, mask):
             code = int(bp_blank[t, k])
             if code >= 0:
                 kind, j = "c", code
+    if score < NEG / 2 or 0 in out[1:]:
+        return None  # маску нельзя уложить в имеющиеся кадры
     text = "".join(IDX2CHAR[c] for c in out[1:])
     return text, confs[1:], score
 
@@ -136,11 +138,14 @@ def _compress(p, thr=0.995):
 
 def decode_ru(p, plate_type="type1"):
     """Лучшая из масок типа (с 2- и 3-значным регионом)."""
-    p = _compress(p)
+    masks = MASKS[plate_type]
+    pc = _compress(p)
+    if pc.shape[0] >= 2 * max(len(m) for m in masks) + 1:
+        p = pc
     best = None
-    for mask in MASKS[plate_type]:
+    for mask in masks:
         r = constrained_decode(p, mask)
-        if best is None or r[2] > best[2]:
+        if r is not None and (best is None or r[2] > best[2]):
             best = r
     return best
 

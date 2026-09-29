@@ -51,7 +51,7 @@ def members(cat, kind):
 
 def file_info(titles):
     d = get({"action": "query", "titles": "|".join(titles), "prop": "imageinfo",
-             "iiprop": "url|size|extmetadata|mime", "iiurlwidth": 2048})
+             "iiprop": "url|size|extmetadata|mime", "iiurlwidth": 1920})
     res = []
     for p in d["query"]["pages"]:
         if "imageinfo" not in p:
@@ -99,26 +99,38 @@ def crawl(roots, depth, out):
                 queue += [(c[len("Category:"):], d + 1) for c in members(cat, "subcat")]
 
 
-def download(cands, img_dir, max_side=2048):
+def _fetch(c, img_dir):
+    if c.get("id"):  # запись из openverse_collect.py
+        name = "ov_" + c["id"] + ".jpg"
+    else:
+        name = "wc_" + re.sub(r"[^\w.-]+", "_", c["title"][5:])[:120]
+    path = os.path.join(img_dir, name)
+    if os.path.exists(path):
+        return name, "exists"
+    url = c["url"].replace("/2048px-", "/1920px-")  # стандартный размер превью Wikimedia
+    wiki = "wikimedia.org" in url
+    for k in range(3):
+        try:
+            if wiki:
+                time.sleep(2.0)  # вежливая частота запросов к upload.wikimedia.org
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            data = urllib.request.urlopen(req, timeout=30).read()
+            with open(path, "wb") as f:
+                f.write(data)
+            return name, "ok"
+        except Exception as e:  # noqa: BLE001
+            err = str(e)
+            time.sleep(3 * (k + 1))
+    return name, "fail " + err
+
+
+def download(cands, img_dir, workers=2):
+    from concurrent.futures import ThreadPoolExecutor
     os.makedirs(img_dir, exist_ok=True)
-    for line in open(cands, encoding="utf-8"):
-        c = json.loads(line)
-        if c.get("id"):  # запись из openverse_collect.py
-            name = "ov_" + c["id"] + ".jpg"
-        else:
-            name = "wc_" + re.sub(r"[^\w.-]+", "_", c["title"][5:])[:120]
-        path = os.path.join(img_dir, name)
-        if os.path.exists(path):
-            continue
-        for k in range(5):
-            try:
-                req = urllib.request.Request(c["url"], headers={"User-Agent": UA})
-                with open(path, "wb") as f:
-                    f.write(urllib.request.urlopen(req, timeout=120).read())
-                break
-            except Exception:
-                time.sleep(5 * (k + 1))
-        time.sleep(0.5)
+    items = [json.loads(line) for line in open(cands, encoding="utf-8")]
+    with ThreadPoolExecutor(workers) as ex:
+        for k, (name, st) in enumerate(ex.map(lambda c: _fetch(c, img_dir), items)):
+            print(k, name, st, flush=True)
 
 
 def main():
