@@ -49,11 +49,18 @@ def _fix_by_mask(s, plate_type):
 
 
 class Pipeline:
-    def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=640, det_conf=0.3,
+    def __init__(self, weights_dir=WEIGHTS, device="auto", det_size=0, det_conf=0.3,
                  char_thr=0.0, emit_other=True, vehicle_filter=False, min_conf=0.25,
                  max_gap=6.0, min_char_conf=0.4, yellow_thr=0.25, target_conf=0.55):
         prov = providers_for(device)
-        self.det = PlateDetector(os.path.join(weights_dir, "detector.onnx"), prov, det_size, det_conf)
+        # Детектор экспортирован с фиксированным входом: detector_<size>.onnx.
+        # По умолчанию: 960 на GPU (мелкие знаки), 640 на CPU (укладывается в 100 мс).
+        if not det_size:
+            det_size = 960 if prov[0] == "CUDAExecutionProvider" else 640
+        det_path = os.path.join(weights_dir, f"detector_{det_size}.onnx")
+        if not os.path.exists(det_path):
+            det_path = os.path.join(weights_dir, "detector.onnx")
+        self.det = PlateDetector(det_path, prov, det_size, det_conf)
         self.rec = Recognizer(os.path.join(weights_dir, "recognizer.onnx"), prov)
         self.veh = VehicleDetector(os.path.join(weights_dir, "vehicle.onnx"), prov) if vehicle_filter else None
         self.char_thr, self.emit_other, self.min_conf = char_thr, emit_other, min_conf

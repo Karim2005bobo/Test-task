@@ -35,7 +35,8 @@ def main():
     ap.add_argument("--config", default=None, help="YAML-подобный файл key: value")
     ap.add_argument("--weights", default=WEIGHTS)
     ap.add_argument("--device", default=os.environ.get("GRZ_DEVICE", "auto"), choices=["auto", "cpu", "cuda"])
-    ap.add_argument("--det-size", type=int, default=640, help="размер входа детектора")
+    ap.add_argument("--det-size", type=int, default=0, choices=[0, 640, 960],
+                    help="вход детектора: 0 – авто (960 на GPU, 640 на CPU)")
     ap.add_argument("--det-conf", type=float, default=0.3)
     ap.add_argument("--char-thr", type=float, default=0.0,
                     help="порог уверенности символа, ниже – '#' (0 – всегда лучшая догадка: '#' в ответе "
