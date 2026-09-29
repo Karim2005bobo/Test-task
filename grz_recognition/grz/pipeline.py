@@ -120,14 +120,16 @@ class Pipeline:
             return None                                   # уверенно «не знак»
         g_text, g_confs, g_score = greedy_with_conf(p)
         yellow = yellow_fraction(crop)
+        # штраф (в натах) за несоответствие цвета фона типу: жёлтый – только 1Б.
+        # Цвет – мягкий признак: белый знак на жёлтом автобусе даёт много «жёлтых»
+        # пикселей в кропе, а выбор 1 или 1Б надёжнее делает маска (A123BC vs AB123).
         if d.layout == 1:
-            cands = ["type1a"]
-        elif yellow >= self.yellow_thr:
-            cands = ["type1b"]
+            cands = {"type1a": 0.0}
         else:
-            cands = ["type1"]
+            cands = {"type1": 0.0 if yellow < 0.6 else 2.0,
+                     "type1b": 0.0 if yellow >= self.yellow_thr else 3.0}
         best = None
-        for ptype in cands:
+        for ptype, pen in cands.items():
             fixed = _fix_by_mask(g_text, ptype)
             if fixed is not None:
                 text, confs, gap = fixed, g_confs, float(sum(fx != gx for fx, gx in zip(fixed, g_text)))
@@ -137,6 +139,7 @@ class Pipeline:
                     continue
                 text, confs, s = r
                 gap = max(0.0, g_score - s)
+            gap += pen
             if best is None or gap < best[3]:
                 best = (text, confs, ptype, gap)
         char_conf = float(np.mean(g_confs)) if g_confs else 0.0
