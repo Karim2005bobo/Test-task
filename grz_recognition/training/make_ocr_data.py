@@ -41,14 +41,20 @@ def _one(i):
     return crop, plate.text, TYPE2IDX[plate.plate_type]
 
 
-def real_crops(dataset_dir, repeat, seed):
+def is_holdout(image, mod):
+    """Детерминированный отложенный тест: каждое mod-е изображение по хешу имени."""
+    import hashlib
+    return mod > 0 and int(hashlib.md5(image.encode()).hexdigest(), 16) % mod == 0
+
+
+def real_crops(dataset_dir, repeat, seed, holdout_mod=0):
     """Кропы реальных знаков по разметке meta.csv (с шумом углов)."""
     rng = np.random.default_rng(seed)
     meta = os.path.join(dataset_dir, "meta.csv")
     out = []
     with open(meta, encoding="utf-8") as f:
         for r in csv.DictReader(f, delimiter=";"):
-            if r["is_synthetic"] == "1" or "#" in r["plate_num"]:
+            if r["is_synthetic"] == "1" or "#" in r["plate_num"] or is_holdout(r["image"], holdout_mod):
                 continue
             img = cv2.imread(os.path.join(dataset_dir, r["image"]))
             if img is None:
@@ -73,11 +79,12 @@ def main():
     ap.add_argument("--coco", default=None)
     ap.add_argument("--real-dataset", default=None, help="каталог датасета с реальными знаками")
     ap.add_argument("--real-repeat", type=int, default=20)
+    ap.add_argument("--holdout-mod", type=int, default=5, help="каждое N-е реальное изображение – отложенный тест")
     ap.add_argument("--workers", type=int, default=os.cpu_count())
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
-    real = real_crops(args.real_dataset, args.real_repeat, args.seed) if args.real_dataset else []
+    real = real_crops(args.real_dataset, args.real_repeat, args.seed, args.holdout_mod) if args.real_dataset else []
     N = args.n + len(real)
     X = np.lib.format.open_memmap(os.path.join(args.out, "X.npy"), mode="w+", dtype=np.uint8,
                                   shape=(N, OCR_H, OCR_W, 3))
