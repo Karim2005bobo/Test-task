@@ -126,14 +126,17 @@ class Pipeline:
         if d.layout == 1:
             cands = {"type1a": 0.0}
         else:
-            cands = {"type1": 0.0 if yellow < 0.6 else 2.0,
-                     "type1b": 0.0 if yellow >= self.yellow_thr else 3.0}
+            # белый фон практически исключает 1Б (иностранные «AB 12345» и т.п.)
+            pen_1b = 0.0 if yellow >= self.yellow_thr else (3.0 if yellow >= 0.1 else 12.0)
+            cands = {"type1": 0.0 if yellow < 0.6 else 2.0, "type1b": pen_1b}
         best = None
         for ptype, pen in cands.items():
             fixed = _fix_by_mask(g_text, ptype)
-            if fixed is not None:
-                text, confs, gap = fixed, g_confs, float(sum(fx != gx for fx, gx in zip(fixed, g_text)))
+            if fixed is not None and fixed == g_text:
+                text, confs, gap = fixed, g_confs, 0.0
             else:
+                # замены символов оцениваются честно – по решётке CTC: уверенно
+                # прочитанная буква на месте цифры стоит дорого
                 r = decode_ru(p, ptype)
                 if r is None:
                     continue

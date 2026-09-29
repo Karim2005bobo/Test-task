@@ -31,11 +31,21 @@ def main():
     ap.add_argument("--det-size", type=int, default=960)
     ap.add_argument("--min-width", type=int, default=40, help="минимальная ширина знака, px")
     ap.add_argument("--per-sheet", type=int, default=30)
+    ap.add_argument("--skip", nargs="*", default=[], help="prelabel.jsonl уже обработанных партий")
+    ap.add_argument("--id-offset", type=int, default=0, help="начальный номер находок (уникальность между партиями)")
     args = ap.parse_args()
-    pipe = Pipeline(args.weights, "cpu", args.det_size, det_conf=0.25, min_conf=0.0, target_conf=0.0)
     os.makedirs(args.out, exist_ok=True)
+    pipe = Pipeline(args.weights, "cpu", args.det_size, det_conf=0.25, min_conf=0.0, target_conf=0.0)
     recs, tiles = [], []
-    files = sorted(f for f in os.listdir(args.images) if f.lower().endswith((".jpg", ".jpeg", ".png")))
+    done = set()
+    for sp in args.skip:
+        done |= {json.loads(line)["image"] for line in open(sp, encoding="utf-8")}
+        done |= {line.strip() for line in open(sp[:-len(".jsonl")] + ".files", encoding="utf-8")} \
+            if os.path.exists(sp[:-len(".jsonl")] + ".files") else set()
+    files = sorted(f for f in os.listdir(args.images)
+                   if f.lower().endswith((".jpg", ".jpeg", ".png")) and f not in done)
+    with open(os.path.join(args.out, "prelabel.files"), "w", encoding="utf-8") as f:
+        f.write("\n".join(files) + "\n")
     for k, name in enumerate(files):
         img = imread(os.path.join(args.images, name))
         if img is None:
@@ -47,7 +57,7 @@ def main():
                 continue
             two = (np.linalg.norm(q[1] - q[0]) / max(np.linalg.norm(q[3] - q[0]), 1)) < 2.6
             strip = rectify(img, q, two)
-            rid = len(recs)
+            rid = args.id_offset + len(recs)
             recs.append({"id": rid, "image": name, "quad": q.round(1).tolist(), "text": r.plate_num,
                          "type": r.plate_type, "conf": round(r.confidence, 3),
                          "yellow": round(yellow_fraction(strip), 3), "width": round(float(w), 1),
