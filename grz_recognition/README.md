@@ -70,8 +70,12 @@ python run.py --input <КАТАЛОГ> --output result.csv            # GPU по
 
 | вход | засчитано | A_type1 | A_type1a | precision |
 |---|---|---|---|---|
-| 960 (GPU) | 93 / 115 | 0,60 | 0,84 | 0,93 |
-| 640 (CPU) | 92 / 115 | 0,33 | 0,87 | 0,94 |
+| 960 (GPU) | 93 / 115 | 0,60 | 0,84 | 0,90 |
+| 640 (CPU) | 94 / 115 | 0,33 | 0,89 | 0,95 |
+
+**Отложенные реальные сцены с жёлтыми 1Б** (не использовались в обучении):
+при входе 960 засчитано 20 из 26 знаков 1Б, тип 1Б определён верно в 100 %
+случаев. Подробности — в записке.
 
 **Скорость на CPU** (4 ядра Xeon 2,1 ГГц, с чтением JPEG): 87 мс/кадр при
 входе 640 и 152 мс/кадр при входе 960. Подробности — в записке.
@@ -91,7 +95,7 @@ weights/        detector_640.onnx, detector_960.onnx, recognizer.onnx, vehicle.o
 generator/      генератор синтетики: штриховой шрифт ГОСТ, рендер знаков, сцены, эффекты
 training/       подготовка данных, обучение, экспорт в ONNX
 tools/          сбор и разметка реальных данных, размытие лиц, самопроверка датасета, бенчмарк
-dataset/        датасет по разделу 6: 578+ реальных и 5000 синтетических изображений (см. dataset/README.md)
+dataset/        датасет по разделу 6: 785 реальных и 5000 синтетических изображений (см. dataset/README.md)
 docs/           пояснительная записка
 ```
 
@@ -125,8 +129,11 @@ python training/add_real_crops.py --src work/nomeroff/autoriaNumberplateOcrRu-20
 python training/add_real_crops.py --options work/nomeroff/autoriaNumberplateOptionsDataset-2021-09-03 --out work/ocr_opts
 python training/mine_negatives.py --images work/det_real/images --weights weights --out work/ocr_neg
 python training/train_recognizer.py --data work/ocr work/ocr_real work/ocr_opts work/ocr_neg --out work/rec --epochs 3
+python training/make_ocr_data.py --out work/ocr_ds --n 0 --real-dataset dataset --real-repeat 20 --holdout-mod 5
+python training/train_recognizer.py --data work/ocr work/ocr_real work/ocr_opts work/ocr_neg work/ocr_ds \
+       --out work/rec_ft --epochs 1 --resume work/rec/best.pt --lr 5e-4
 
 # 3. Экспорт в weights/
-python training/export_onnx.py --rec work/rec/best.pt --det work/det_runs/det_mix/weights/best.pt \
+python training/export_onnx.py --rec work/rec_ft/best.pt --det work/det_runs/det_mix/weights/best.pt \
        --vehicle work/dl/yolo11n.pt
 ```

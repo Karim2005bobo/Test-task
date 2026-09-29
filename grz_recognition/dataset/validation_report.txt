@@ -2,20 +2,20 @@ validate_dataset.py v1.0 — Волга-IT 2026, полуфинал, номин�
 Датасет: /home/user/Test-task/grz_recognition/dataset
 
 == Статистика ==
-Изображений: 5578 (реальных 578, синтетических 5000, без разметки в meta 0)
-Строк в meta.csv: 7780
-Знаков по типам: {'type1a': 2480, 'type1': 1840, 'other': 1311, 'type1b': 2149}
-Реальных изображений по типам: {'type1a': 300, 'type1': 66, 'other': 190, 'type1b': 28}  (рекомендуется {'type1a': 150, 'type1b': 300, 'other': 50})
-Уникальных читаемых ГРЗ (реальные): {'type1a': 300, 'type1': 67, 'other': 189, 'type1b': 24}  (рекомендуется {'type1a': 50, 'type1b': 100})
-Условия съёмки: {'day': 6331, 'night': 1449, 'angle': 4684, 'dirt': 3629, 'glare': 1747, 'snow': 675, 'rain': 881, 'motion_blur': 1084}
-Лицензии: {'CC BY 4.0': 7744, 'CC-BY-2.0': 22, 'CC-BY-4.0': 5, 'CC0-1.0': 4, 'Public domain': 3, 'CC-BY-3.0': 2}
+Изображений: 5785 (реальных 785, синтетических 5000, без разметки в meta 0)
+Строк в meta.csv: 8007
+Знаков по типам: {'type1a': 2480, 'type1': 1915, 'other': 1359, 'type1b': 2253}
+Реальных изображений по типам: {'type1a': 300, 'type1': 134, 'other': 234, 'type1b': 128}  (рекомендуется {'type1a': 150, 'type1b': 300, 'other': 50})
+Уникальных читаемых ГРЗ (реальные): {'type1a': 300, 'type1': 118, 'other': 237, 'type1b': 97}  (рекомендуется {'type1a': 50, 'type1b': 100})
+Условия съёмки: {'day': 6554, 'night': 1453, 'angle': 4684, 'dirt': 3629, 'glare': 1747, 'snow': 675, 'rain': 881, 'motion_blur': 1084}
+Лицензии: {'CC BY 4.0': 7744, 'CC-BY-2.0': 212, 'CC0-1.0': 23, 'Public domain': 21, 'CC-BY-4.0': 5, 'CC-BY-3.0': 2}
 Источники (топ): {'AUTO.RIA Numberplate Options Dataset 2021-09-03 (Nomeroff...': 500, 'EU License Plates Images, https://zenodo.org/records/3967...': 50, 'https://commons.wikimedia.org/wiki/File:Tscheljabinsk-Mar...': 4, 'generator.generate_dataset seed=2025 idx=10': 3, 'generator.generate_dataset seed=2025 idx=19': 3, 'generator.generate_dataset seed=2025 idx=23': 3, 'generator.generate_dataset seed=2025 idx=24': 3, 'generator.generate_dataset seed=2025 idx=67': 3, 'generator.generate_dataset seed=2025 idx=82': 3, 'generator.generate_dataset seed=2025 idx=140': 3, 'generator.generate_dataset seed=2025 idx=141': 3, 'generator.generate_dataset seed=2025 idx=148': 3, 'generator.generate_dataset seed=2025 idx=177': 3, 'generator.generate_dataset seed=2025 idx=181': 3, 'generator.generate_dataset seed=2025 idx=212': 3}
 Побайтовых дубликатов: 0; совпадений с отладочным набором: 0
 
 == ERROR: 0 ==
 
-== WARNING: 778 ==
--- meta-bbox (752)
+== WARNING: 975 ==
+-- meta-bbox (759)
    [WARNING] meta-bbox              meta.csv:2: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
    [WARNING] meta-bbox              meta.csv:3: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
    [WARNING] meta-bbox              meta.csv:4: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
@@ -46,8 +46,8 @@ validate_dataset.py v1.0 — Волга-IT 2026, полуфинал, номин�
    [WARNING] meta-bbox              meta.csv:29: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
    [WARNING] meta-bbox              meta.csv:30: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
    [WARNING] meta-bbox              meta.csv:31: bbox занимает почти весь кадр — это кроп знака, а не кадр с камеры?
-   ... ещё 722 (см. JSON-отчёт)
--- meta-license (24)
+   ... ещё 729 (см. JSON-отчёт)
+-- meta-license (214)
    [WARNING] meta-license           meta.csv:552: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
    [WARNING] meta-license           meta.csv:553: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
    [WARNING] meta-license           meta.csv:554: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
@@ -72,11 +72,18 @@ validate_dataset.py v1.0 — Волга-IT 2026, полуфинал, номин�
    [WARNING] meta-license           meta.csv:581: лицензия «CC-BY-3.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
    [WARNING] meta-license           meta.csv:586: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
    [WARNING] meta-license           meta.csv:587: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7782: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7784: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7787: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7788: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7789: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   [WARNING] meta-license           meta.csv:7790: лицензия «CC-BY-2.0» не распознана — укажите SPDX-идентификатор (CC0-1.0, CC-BY-4.0) или own_photo
+   ... ещё 184 (см. JSON-отчёт)
 -- volume (2)
-   [WARNING] volume                 <root>: реальных изображений type1b: 28, рекомендуется не менее 300
-   [WARNING] volume                 <root>: уникальных полностью читаемых ГРЗ type1b на реальных фото: 24, рекомендуется не менее 100
+   [WARNING] volume                 <root>: реальных изображений type1b: 128, рекомендуется не менее 300
+   [WARNING] volume                 <root>: уникальных полностью читаемых ГРЗ type1b на реальных фото: 97, рекомендуется не менее 100
 
 Напоминание (проверяется жюри вручную): лица людей размыты; нет кадров, где человек — смысловой центр;
 материалы получены легально (п. 6.3); разметка не сфальсифицирована (п. 8).
 
-ИТОГ: валидация ПРОЙДЕНА с предупреждениями. Ошибок: 0, предупреждений: 778.
+ИТОГ: валидация ПРОЙДЕНА с предупреждениями. Ошибок: 0, предупреждений: 975.
