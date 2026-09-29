@@ -1,6 +1,6 @@
 """Экспорт обученных моделей в ONNX (каталог weights/).
 
-python training/export_onnx.py --rec work/rec/best.pt --det work/det_runs/yolo11n_pose_grz/weights/best.pt \
+python training/export_onnx.py --rec work/rec3/best.pt --det work/det_runs/det_mix/weights/best.pt \
     --vehicle work/dl/yolo11n.pt
 """
 import argparse
@@ -59,7 +59,9 @@ def main():
     if args.rec:
         export_rec(args.rec, os.path.join(OUT, "recognizer.onnx"))
     if args.det:
-        export_yolo(args.det, os.path.join(OUT, "detector.onnx"), args.imgsz)
+        # два варианта входа: 640 для CPU (≤ 100 мс/кадр), 960 для GPU (мелкие знаки)
+        for size in (640, 960):
+            export_yolo(args.det, os.path.join(OUT, f"detector_{size}.onnx"), size)
     if args.vehicle:
         export_yolo(args.vehicle, os.path.join(OUT, "vehicle.onnx"), args.imgsz)
 
