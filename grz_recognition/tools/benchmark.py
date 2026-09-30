@@ -1,7 +1,3 @@
-"""Замер скорости по стадиям: чтение, детектор, выпрямление+распознавание+постобработка.
-
-python tools/benchmark.py --input debug/images --device cpu --det-size 640
-"""
 import argparse
 import os
 import sys
