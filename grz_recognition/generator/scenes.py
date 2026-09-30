@@ -1,14 +1,3 @@
-"""Сборка синтетических кадров: фон + ТС + один или несколько знаков.
-
-Источники фона:
-  * procedural – полностью процедурные сцены (дорога, стены, «кузова» ТС,
-    рекламные щиты). Не требуют сторонних данных, поэтому сдаваемая часть
-    синтетического датасета генерируется только из них;
-  * carparts   – фото автомобилей Ultralytics Carparts-Seg с разметкой бамперов
-    (знак ставится на бампер). Используется только для обучения, в сдаваемый
-    датасет не входит (см. dataset/README.md);
-  * coco       – COCO128 (боксы car/bus/truck/motorcycle), аналогично.
-"""
 import glob
 import math
 import os
@@ -21,9 +10,6 @@ from grz.rectify import order_quad, rectify
 
 VEHICLE_COCO = {2, 3, 5, 7}
 BUMPER_CLASSES = {0, 8}  # back_bumper, front_bumper в Carparts-Seg
-
-
-# ------------------------------------------------------------- фон
 
 class BackgroundPool:
     def __init__(self, carparts_dir=None, coco_dir=None, weights=(0.6, 0.1, 0.3)):
@@ -59,7 +45,6 @@ class BackgroundPool:
         self.weights = w / w.sum()
 
     def random_patch(self, rng, w, h):
-        """Случайный фрагмент фона размера w x h (быстро, без сборки полной сцены)."""
         src = rng.choice(3, p=self.weights)
         if src == 2:
             return procedural_patch(rng, w, h)
@@ -93,7 +78,6 @@ def _rand_color(rng, lo=0, hi=255):
 
 
 def _draw_vehicle(img, rng, x, y, w):
-    """Процедурный «вид сзади/спереди» ТС. Возвращает якорь бампера."""
     h = int(w * rng.uniform(0.55, 0.9))
     body = _rand_color(rng, 20, 235)
     x, y = int(x), int(y)
@@ -172,11 +156,7 @@ def procedural_scene(rng):
         anchors.append((bx + bw * 0.1, by + bh * 0.45, bw * 0.8, bh * 0.4, 0))
     return img, anchors
 
-
-# ------------------------------------------------------------- геометрия
-
 def project_quad(rng, size_mm, center, width_px, max_yaw=50, max_pitch=25, max_roll=12):
-    """Проекция прямоугольного знака с поворотами в 3D. Возвращает (quad 4x2, angles)."""
     Wm, Hm = size_mm
     yaw = math.radians(rng.uniform(-max_yaw, max_yaw) * (rng.random() < 0.6))
     pitch = math.radians(rng.uniform(-max_pitch, max_pitch) * (rng.random() < 0.5))
@@ -196,10 +176,8 @@ def project_quad(rng, size_mm, center, width_px, max_yaw=50, max_pitch=25, max_r
 
 
 def paste_plate(img, plate_img, plate_mask, quad, rng, holder=True):
-    """Вклеивает знак в кадр по четырёхугольнику quad (с рамкой-держателем)."""
     ph, pw = plate_img.shape[:2]
     qw = np.linalg.norm(quad[1] - quad[0])
-    # предварительное уменьшение: warpPerspective плохо фильтрует сильное сжатие
     scale = min(1.0, 2.0 * qw / pw)
     if scale < 1.0:
         plate_img = cv2.resize(plate_img, (max(int(pw * scale), 4), max(int(ph * scale), 4)), interpolation=cv2.INTER_AREA)
@@ -208,7 +186,6 @@ def paste_plate(img, plate_img, plate_mask, quad, rng, holder=True):
     src = np.array([[0, 0], [pw - 1, 0], [pw - 1, ph - 1], [0, ph - 1]], np.float32)
     H, W = img.shape[:2]
     if holder and rng.random() < 0.45:
-        # рамка номера: расширяем знак полосой тёмного/хромированного пластика
         m = int(max(2, 0.04 * ph))
         col = _rand_color(rng, 0, 60) if rng.random() < 0.8 else _rand_color(rng, 150, 230)
         big = cv2.copyMakeBorder(plate_img, m, m, m, m, cv2.BORDER_CONSTANT, value=col)
@@ -240,16 +217,11 @@ def _match_light(plate_img, bg, quad, rng):
     g = np.clip((m / 140) ** 0.4, 0.55, 1.1) * rng.uniform(0.8, 1.1)
     return np.clip(plate_img.astype(np.float32) * g, 0, 255).astype(np.uint8)
 
-
-# ------------------------------------------------------------- сцены
-
 def _plate_width_for_anchor(rng, plate, anchor_w):
-    # доля ширины бампера: 520 мм на бампере ~1.7 м ≈ 0.3
     return anchor_w * rng.uniform(0.2, 0.4) * plate.size_mm[0] / 520
 
 
 def make_scene(rng, pool, type_probs=None, allow_empty=True):
-    """-> (изображение, список аннотаций, условия съёмки)."""
     img, anchors = pool.sample(rng)
     H, W = img.shape[:2]
     rng.shuffle(anchors)
@@ -264,7 +236,6 @@ def make_scene(rng, pool, type_probs=None, allow_empty=True):
             pw = _plate_width_for_anchor(rng, plate, aw)
             c = (ax + aw * rng.uniform(0.4, 0.6), ay + ah * rng.uniform(0.3, 0.7))
         else:
-            # дополнительный знак в произвольном месте (в т.ч. мелкий/удалённый)
             veh = 1
             pw = W * rng.uniform(0.03, 0.25) * plate.size_mm[0] / 520
             c = (rng.uniform(0.1, 0.9) * W, rng.uniform(0.2, 0.95) * H)
@@ -272,7 +243,6 @@ def make_scene(rng, pool, type_probs=None, allow_empty=True):
         quad, ang = project_quad(rng, plate.size_mm, c, pw)
         if quad[:, 0].min() < 0 or quad[:, 1].min() < 0 or quad[:, 0].max() >= W or quad[:, 1].max() >= H:
             continue
-        # не допускаем сильного перекрытия с уже вклеенными знаками
         if any(_iou(quad, a["quad"]) > 0.05 for a in anns):
             continue
         if ang:
@@ -297,12 +267,6 @@ def _iou(q1, q2):
 
 
 def make_ocr_sample(rng, pool, type_probs=None, text=None):
-    """Выпрямленный кроп 224x48 для обучения распознавателя.
-
-    Знак вклеивается в фрагмент фона в случайном масштабе (в т.ч. очень мелком),
-    затем углы берутся с шумом, как у реального детектора, и кроп выпрямляется
-    тем же кодом, что и на инференсе.
-    """
     plate = plates.render_random(rng, type_probs=type_probs, text=text)
     pimg, _ = effects.degrade_plate(plate.image, rng)
     # целевая ширина знака в пикселях: от «очень далеко» до крупного плана
@@ -325,7 +289,6 @@ def make_ocr_sample(rng, pool, type_probs=None, text=None):
 
 
 def make_none_sample(rng, pool):
-    """Негатив для классификатора: фрагмент фона или надпись, не являющаяся ГРЗ."""
     w = int(rng.integers(40, 300))
     h = int(w / rng.uniform(1.5, 5.0))
     crop = pool.random_patch(rng, w, h)
