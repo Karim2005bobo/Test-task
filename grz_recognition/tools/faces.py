@@ -1,8 +1,3 @@
-"""Размытие лиц перед включением фото в датасет (п. 6.3 задания).
-
-Детектор лиц YuNet (OpenCV Zoo, MIT, tools/models/face_detection_yunet_2023mar.onnx).
-Изображение обрабатывается тайлами: лица в уличных кадрах мелкие.
-"""
 import os
 
 import cv2
@@ -28,7 +23,6 @@ def detect_faces(img, score=0.6, tile=640):
 
 
 def blur_faces(img, pad=0.3):
-    """Размывает найденные лица на месте; возвращает их число."""
     H, W = img.shape[:2]
     boxes = detect_faces(img)
     for x, y, w, h in boxes:
