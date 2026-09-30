@@ -1,15 +1,3 @@
-"""Сравнение CSV решения с эталонной разметкой (формат отладочного набора).
-
-python tools/evaluate.py --pred result.csv --gt debug/labels.csv
-
-Сопоставление знаков внутри изображения – жадно по нормированному
-расстоянию Левенштейна. Метрики:
-  * exact  – доля эталонных знаков, прочитанных полностью верно (по типам);
-  * char   – посимвольная точность 1 - Lev/len;
-  * type   – точность типа на сопоставленных парах;
-  * precision/recall обнаружения (пара считается найденной при CER <= 0.5);
-  * other->type1 – число «прочих» знаков, выданных как type1/1a/1b (ошибка по ТЗ).
-"""
 import argparse
 import csv
 from collections import defaultdict
@@ -29,7 +17,6 @@ def lev(a, b):
 
 
 def match(cost):
-    """Жадное сопоставление по возрастанию стоимости (знаков в кадре единицы)."""
     pairs, used_r, used_c = [], set(), set()
     for k in np.argsort(cost, axis=None):
         i, j = divmod(int(k), cost.shape[1])
