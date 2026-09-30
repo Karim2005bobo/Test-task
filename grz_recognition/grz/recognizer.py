@@ -1,13 +1,3 @@
-"""Инференс распознавателя (ONNX Runtime) и декодирование CTC.
-
-Декодирование в два шага:
-  1. жадное (без ограничений) – используется для «прочих» знаков;
-  2. Витерби по решётке CTC, ограниченной маской номера РФ
-     (L DDD LL DD[D] для типов 1/1А, LL DDD DD[D] для 1Б). Ограниченный поиск сам исправляет
-     типичные путаницы O/0, B/8 и т.п., так как запрещает буквы на местах цифр
-     и наоборот, а также неверную первую цифру трёхзначного региона.
-Символы с низкой уверенностью заменяются на '#', как в эталонной разметке.
-"""
 import numpy as np
 
 from grz.plate_format import BLANK, CHAR2IDX, IDX2CHAR, MASKS, allowed_chars
@@ -17,7 +7,6 @@ _ALLOWED = {m: np.array([CHAR2IDX[c] for c in allowed_chars(m)]) for m in "LD"}
 
 
 def greedy_decode(probs):
-    """probs: [N, T, C] -> список строк."""
     out = []
     for p in probs:
         best = p.argmax(-1)
@@ -31,7 +20,6 @@ def greedy_decode(probs):
 
 
 def greedy_with_conf(p):
-    """p: [T, C] -> (строка, уверенности символов, средний log-prob пути)."""
     best = p.argmax(-1)
     chars, confs, prev = [], [], BLANK
     for t, b in enumerate(best):
@@ -46,12 +34,6 @@ def greedy_with_conf(p):
 
 
 def constrained_decode(p, mask):
-    """Лучший путь CTC, порождающий строку, удовлетворяющую маске.
-
-    p: [T, C] вероятности. Возвращает (строка, уверенности символов, log-prob пути).
-    Состояния: blank[k] – выпущено k символов, сейчас пробел;
-               char[k][j] – сейчас «звучит» k-й символ, равный sets[k][j].
-    """
     T = p.shape[0]
     L = len(mask)
     lp = np.log(p + 1e-12)
@@ -126,7 +108,6 @@ def constrained_decode(p, mask):
 
 
 def _compress(p, thr=0.995):
-    """Схлопывает серии «чистых» пробелов в один кадр – ускоряет Витерби в 2-3 раза."""
     keep, prev_blank = [], False
     for t in range(p.shape[0]):
         is_blank = p[t, BLANK] > thr
@@ -137,7 +118,6 @@ def _compress(p, thr=0.995):
 
 
 def decode_ru(p, plate_type="type1"):
-    """Лучшая из масок типа (с 2- и 3-значным регионом)."""
     masks = MASKS[plate_type]
     pc = _compress(p)
     if pc.shape[0] >= 2 * max(len(m) for m in masks) + 1:
@@ -151,8 +131,6 @@ def decode_ru(p, plate_type="type1"):
 
 
 class Recognizer:
-    """Обёртка ONNX-модели распознавателя."""
-
     def __init__(self, path, providers):
         import onnxruntime as ort
         so = ort.SessionOptions()
