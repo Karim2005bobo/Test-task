@@ -1,4 +1,3 @@
-"""Полный пайплайн: детекция -> выпрямление -> распознавание -> постобработка."""
 import os
 from dataclasses import dataclass
 
@@ -31,7 +30,6 @@ def providers_for(device):
 
 
 def _fix_by_mask(s, plate_type):
-    """Позиционная замена похожих символов; None, если строку нельзя привести к маске."""
     for mask in MASKS[plate_type]:
         if len(s) != len(mask):
             continue
@@ -71,13 +69,11 @@ class Pipeline:
         return self.process(img, self.det(img))
 
     def process(self, img, dets):
-        """Выпрямление, распознавание и постобработка найденных знаков."""
         if not dets:
             return []
         crops = []
         for d in dets:
             q = order_quad(d.quad)
-            # вырожденные точки -> берём прямоугольник детекции
             area = cv2.contourArea(q)
             bx, by, bw, bh = d.box
             if d.kpt_conf < 0.3 or area < 0.3 * bw * bh:
@@ -95,8 +91,6 @@ class Pipeline:
             if vboxes is not None and not _on_vehicle(d.quad, vboxes):
                 conf *= 0.3
             if ptype != "other" and conf < self.target_conf:
-                # неуверенный знак выдаём как other: такие строки не штрафуются,
-                # а ложное «прочтение» эмблемы/надписи как type1 – штрафуется
                 ptype = "other"
             if conf < self.min_conf:
                 continue
@@ -106,27 +100,13 @@ class Pipeline:
         return results
 
     def decide(self, d, p, tp, crop):
-        """Выбор типа и текста знака.
-
-        Тип определяется совместно: компоновка от детектора (1 или 2 строки),
-        цвет фона (жёлтый – только 1Б), соответствие прочитанного текста маске
-        типа и уверенность распознавателя. Мерой соответствия маске служит
-        «цена» маски: насколько лучший путь CTC, удовлетворяющий маске, хуже
-        лучшего пути без ограничений (в натах). Знак, текст которого не
-        укладывается ни в одну маску целевых типов, получает тип other – такие
-        строки не штрафуются при проверке и не выдаются за целевые.
-        """
         if tp[4] > 0.9 and tp[4] > 3 * max(tp[:4]):
             return None                                   # уверенно «не знак»
         g_text, g_confs, g_score = greedy_with_conf(p)
         yellow = yellow_fraction(crop)
-        # штраф (в натах) за несоответствие цвета фона типу: жёлтый – только 1Б.
-        # Цвет – мягкий признак: белый знак на жёлтом автобусе даёт много «жёлтых»
-        # пикселей в кропе, а выбор 1 или 1Б надёжнее делает маска (A123BC vs AB123).
         if d.layout == 1:
             cands = {"type1a": 0.0}
         else:
-            # белый фон практически исключает 1Б (иностранные «AB 12345» и т.п.)
             pen_1b = 0.0 if yellow >= self.yellow_thr else (3.0 if yellow >= 0.1 else 12.0)
             cands = {"type1": 0.0 if yellow < 0.6 else 2.0, "type1b": pen_1b}
         best = None
@@ -135,8 +115,6 @@ class Pipeline:
             if fixed is not None and fixed == g_text:
                 text, confs, gap = fixed, g_confs, 0.0
             else:
-                # замены символов оцениваются честно – по решётке CTC: уверенно
-                # прочитанная буква на месте цифры стоит дорого
                 r = decode_ru(p, ptype)
                 if r is None:
                     continue
@@ -159,7 +137,6 @@ class Pipeline:
 
 
 def yellow_fraction(crop):
-    """Доля «жёлтых» пикселей фона знака (тип 1Б)."""
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     m = (h >= 12) & (h <= 38) & (s >= 70) & (v >= 60)
@@ -176,7 +153,6 @@ def _on_vehicle(quad, vboxes):
 
 
 def imread(path):
-    """Чтение с поддержкой не-ASCII путей (Windows)."""
     try:
         data = np.fromfile(path, np.uint8)
         if data.size == 0:
