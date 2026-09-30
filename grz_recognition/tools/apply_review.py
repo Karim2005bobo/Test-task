@@ -1,17 +1,3 @@
-"""Перенос вручную проверенных находок (tools/prelabel.py) в реальную часть датасета.
-
-review.json – список проверенных знаков:
-  [{"id": 418, "text": "AE79277", "type": "type1b"}, ...]
-id – номер находки в prelabel.jsonl (углы берутся оттуда), text/type –
-значения после ручной проверки (нечитаемые позиции – '#').
-
-Для каждого изображения: лица размываются (YuNet, tools/faces.py),
-изображение копируется в images/real/, пишутся labels/*.txt и строки meta.csv
-с источником (страница, автор) и лицензией из candidates.jsonl.
-
-python tools/apply_review.py --review review.json --prelabel work/prelabel/prelabel.jsonl \
-    --candidates work/commons/candidates.jsonl --images work/commons/img --dataset dataset
-"""
 import argparse
 import csv
 import json
