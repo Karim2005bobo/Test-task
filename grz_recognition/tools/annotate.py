@@ -8,11 +8,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from generator.generate_dataset import META_FIELDS, yolo_line  # noqa: E402
-from grz.plate_format import TYPE2IDX  # noqa: E402
-from grz.rectify import order_quad  # noqa: E402
-from tools.faces import blur_faces  # noqa: E402
-
+from generator.generate_dataset import META_FIELDS, yolo_line  
+from grz.plate_format import TYPE2IDX
+from grz.rectify import order_quad
+from tools.faces import blur_faces  
 TYPES = {"1": "type1", "1a": "type1a", "1b": "type1b", "o": "other"}
 
 
