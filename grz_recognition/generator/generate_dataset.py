@@ -1,19 +1,3 @@
-"""Генератор синтетической части датасета (воспроизводимый, фиксированный seed).
-
-Режимы вывода:
-  --format dataset  структура из раздела 6 задания: images/synthetic, labels,
-                    meta.csv (дописывается/перезаписывается синтетическая часть);
-  --format yolo     обучающая выборка детектора в формате Ultralytics pose
-                    (классы компоновки: 0 – однострочный, 1 – двухстрочный знак).
-
-Каждое изображение i генерируется собственным ГСЧ default_rng([seed, i]),
-поэтому результат не зависит от числа процессов и порядка выполнения.
-
-Примеры:
-  python -m generator.generate_dataset --out ../dataset --n 5000 --seed 2025
-  python -m generator.generate_dataset --format yolo --out work/det --n 20000 \
-      --carparts work/dl --coco work/dl/coco128 --seed 7
-"""
 import argparse
 import csv
 import os
@@ -43,7 +27,6 @@ def _init(args):
 
 
 def bbox_from_quad(q):
-    """bbox x,y,w,h, описывающий quad после округления до целых (как он записан в meta.csv)."""
     qi = np.round(np.asarray(q, np.float64)).astype(int)
     x0, y0 = qi.min(0)
     x1, y1 = qi.max(0)
@@ -51,12 +34,7 @@ def bbox_from_quad(q):
 
 
 def yolo_line(cls, quad, W, H, visibility=False):
-    """YOLO: class cx cy w h x1 y1 ... x4 y4 (нормировано в [0, 1]).
-
-    visibility=True добавляет флаг видимости к каждой точке (формат Ultralytics
-    pose с kpt_shape [4, 3]) – только для обучающей выборки детектора.
-    """
-    q = np.clip(np.asarray(quad, np.float64), 0, [W - 1, H - 1])
+  lip(np.asarray(quad, np.float64), 0, [W - 1, H - 1])
     x0, y0 = q.min(0)
     x1, y1 = q.max(0)
     vals = [f"{(x0 + x1) / 2 / W:.6f}", f"{(y0 + y1) / 2 / H:.6f}", f"{(x1 - x0) / W:.6f}", f"{(y1 - y0) / H:.6f}"]
