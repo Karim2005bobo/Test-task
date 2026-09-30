@@ -1,8 +1,3 @@
-"""Экспорт обученных моделей в ONNX (каталог weights/).
-
-python training/export_onnx.py --rec work/rec3/best.pt --det work/det_runs/det_mix/weights/best.pt \
-    --vehicle work/dl/yolo11n.pt
-"""
 import argparse
 import os
 import shutil
@@ -12,14 +7,12 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from training.model import PlateNet  # noqa: E402
+from training.model import PlateNet
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "weights")
 
 
 class Exported(torch.nn.Module):
-    """Возвращает вероятности: ctc [N, T, C] и тип [N, 5]."""
-
     def __init__(self, m):
         super().__init__()
         self.m = m
