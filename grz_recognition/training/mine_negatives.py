@@ -1,13 +1,3 @@
-"""Жёсткие негативы для класса «не знак» распознавателя.
-
-Детектор прогоняется по реальным фото с полной разметкой номеров
-(AUTO.RIA Numberplate Dataset, CC BY 4.0, см. training/import_via.py).
-Срабатывания, не пересекающиеся ни с одним размеченным номером, – эмблемы,
-надписи, фонари, решётки – выпрямляются так же, как на инференсе, и
-сохраняются с классом 4 («не знак») и пустым текстом.
-
-python training/mine_negatives.py --images work/det_real/images --weights weights --out work/ocr_neg
-"""
 import argparse
 import glob
 import os
