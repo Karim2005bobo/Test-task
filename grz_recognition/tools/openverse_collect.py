@@ -1,12 +1,3 @@
-"""Сбор кандидатов в реальную часть датасета через Openverse (api.openverse.org).
-
-Openverse индексирует изображения под лицензиями Creative Commons (Flickr,
-Wikimedia и др.). Запрашиваются только лицензии, совместимые с CC BY 4.0:
-by, cc0, pdm. Результат дописывается в тот же JSONL, что и у
-commons_collect.py (поля title, license, artist, page, url, ...).
-
-python tools/openverse_collect.py --out work/commons/candidates.jsonl "taxi moscow" "такси" "маршрутка"
-"""
 import argparse
 import json
 import os
