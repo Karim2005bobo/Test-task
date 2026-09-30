@@ -1,10 +1,3 @@
-"""Распознавание ГРЗ в каталоге изображений -> CSV.
-
-Использование:
-  python run.py --input /path/to/images --output result.csv
-Путь можно передать и через переменные окружения GRZ_INPUT / GRZ_OUTPUT
-или конфигурационный файл (--config config.yaml, ключи совпадают с аргументами).
-"""
 import argparse
 import csv
 import os
