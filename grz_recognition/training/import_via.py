@@ -1,10 +1,3 @@
-"""Конвертация разметки VIA (AUTO.RIA Numberplate Dataset, CC BY 4.0) в выборку детектора.
-
-Полигоны номеров (4 точки) -> YOLO pose: класс компоновки (по пропорциям
-четырёхугольника: < 2.6 – двухстрочный) + 4 угла по часовой от левого верхнего.
-
-python training/import_via.py --src work/nomeroff/det2018/autoriaNumberplateDataset-2018-11-20 --out work/det_real
-"""
 import argparse
 import json
 import os
