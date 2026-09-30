@@ -1,0 +1,10 @@
+# python run.py --config config.example.yaml
+input: /data/images
+output: result.csv
+device: auto          # auto | cpu | cuda
+det_size: 640
+det_conf: 0.3
+char_thr: 0.35
+min_conf: 0.25
+no_other: false
+vehicle_filter: false
