@@ -1,12 +1,3 @@
-"""Рендер ГРЗ в канонической (фронтальной) проекции.
-
-Поддерживаются целевые типы ГОСТ Р 50577-2018 (1, 1А, 1Б) и набор «прочих»
-знаков для негативных примеров: прицепы, мотоциклы, транзитные, МВД,
-Вооружённые Силы, дипломатические, иностранные (EU/BY/KZ/UA).
-
-Геометрия задаётся в миллиметрах (приближённо по чертежам ГОСТ), растеризация
-идёт с плотностью ppm пикселей на миллиметр.
-"""
 import os
 from dataclasses import dataclass, field
 
@@ -22,7 +13,6 @@ TTF_FONTS = ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf",
              "DejaVuSansMono-Bold.ttf", "LiberationMono-Bold.ttf"]
 _font_cache = {}
 
-# Подтипы «прочих» знаков и их доля среди негативов.
 OTHER_KINDS = ["trailer", "moto", "transit", "police", "military", "diplomatic",
                "foreign_eu", "foreign_by", "foreign_kz", "foreign_ua"]
 
@@ -37,10 +27,6 @@ class Plate:
     two_line: bool
     size_mm: tuple = field(default=(520, 112))
 
-
-# ---------------------------------------------------------------- utils
-
-# Реальные трёхзначные коды регионов (выданы на 2026 г.), в т.ч. не на 1/2/7.
 REGIONS_3 = ["102", "113", "116", "121", "122", "123", "124", "125", "126", "134", "136", "138", "142",
              "147", "150", "152", "154", "156", "159", "161", "163", "164", "173", "174", "177", "178",
              "186", "190", "193", "196", "197", "198", "199", "277", "299", "323", "550", "702", "716",
@@ -73,7 +59,6 @@ def _ttf(name, size):
 
 
 def _draw_ttf_char(img, ch, x, y, w, h, color, font_name):
-    """Растеризует символ TTF-шрифтом и вписывает его ровно в бокс (x, y, w, h)."""
     size = max(int(h * 1.6), 8)
     font = _ttf(font_name, size)
     canvas = Image.new("L", (size * 2, size * 2), 0)
@@ -96,7 +81,6 @@ def _draw_ttf_char(img, ch, x, y, w, h, color, font_name):
 
 
 class Painter:
-    """Рисует символы в миллиметровой системе координат."""
 
     def __init__(self, img, ppm, fg, style, rng):
         self.img, self.ppm, self.fg, self.style, self.rng = img, ppm, fg, style, rng
@@ -121,7 +105,6 @@ class Painter:
                            cw * 0.88 * self.ppm, h * self.ppm, self.fg, font)
 
     def row(self, items, x0, x1, bottom):
-        """items: список (символ, ширина, высота, отступ_перед). Центрируется в [x0, x1]."""
         total = sum(w + g for _, w, _, g in items)
         x = x0 + (x1 - x0 - total) / 2
         for ch, w, h, g in items:
@@ -148,7 +131,6 @@ def _base(size_mm, ppm, bg, fg, rng, border=True, radius_mm=6):
 
 
 def _flag(img, x, y, w, h, ppm, colors=((255, 255, 255), (165, 57, 0), (32, 20, 213))):
-    """Флаг из горизонтальных полос (цвета в BGR); по умолчанию – флаг РФ."""
     X, Y, Wp, Hp = [int(round(v * ppm)) for v in (x, y, w, h)]
     n = len(colors)
     for i, c in enumerate(colors):
@@ -173,9 +155,6 @@ def _screws(img, ppm, rng, pts_mm):
         c = (int(rng.integers(90, 200)),) * 3
         cv2.circle(img, (int(x * ppm), int(y * ppm)), int(rng.uniform(3, 5) * ppm), c, -1, cv2.LINE_AA)
 
-
-# ---------------------------------------------------------------- colors
-
 def _white(rng):
     v = rng.uniform(205, 252)
     tint = rng.normal(0, 5, 3)
@@ -183,7 +162,6 @@ def _white(rng):
 
 
 def _yellow(rng):
-    # BGR: насыщенный жёлтый / выгоревший / оранжеватый
     b = rng.uniform(0, 70)
     g = rng.uniform(165, 225)
     r = rng.uniform(215, 255)
@@ -194,9 +172,6 @@ def _black(rng):
     v = int(rng.uniform(5, 45))
     return (v, v, v)
 
-
-# ---------------------------------------------------------------- targets
-
 def render_type1(text, rng, ppm=2.0, yellow=False, style="stroke"):
     fg = _black(rng)
     bg = _yellow(rng) if yellow else _white(rng)
@@ -205,7 +180,6 @@ def render_type1(text, rng, ppm=2.0, yellow=False, style="stroke"):
     lw, lh, dw, dh = 50, 58, 48, 76
     bottom = 96
     if yellow:
-        # тип 1Б: ЛЛ ЦЦЦ | регион
         L12, D, region = text[:2], text[2:5], text[5:]
         items = [(c, lw, lh, 0 if i == 0 else 8) for i, c in enumerate(L12)] \
             + [(c, dw, dh, 16 if i == 0 else 8) for i, c in enumerate(D)]
@@ -240,9 +214,6 @@ def render_type1a(text, rng, ppm=2.0, style="stroke"):
     pt.text_small("RUS", 248, 126, 32, 13)
     _screws(img, ppm, rng, [(145, 90)])
     return Plate(img, mask, text, "type1a", "type1a", True, (290, 170))
-
-
-# ---------------------------------------------------------------- others
 
 def _rand(rng, alphabet, n):
     return "".join(rng.choice(list(alphabet), n))
@@ -313,7 +284,6 @@ def _render_foreign(kind, rng, ppm):
         text = _rand(rng, "ABCEHIKMOPTX", 2) + _rand(rng, DIGITS, 4) + _rand(rng, "ABCEHIKMOPTX", 2)
         size = (520, 112)
     img, mask = _base(size, ppm, bg, fg, rng, radius_mm=5)
-    # Синяя полоса слева (EU/UA) или флаг (BY/KZ)
     strip_w = 44
     X = int(round(strip_w * ppm))
     if kind in ("foreign_eu", "foreign_ua"):
@@ -337,7 +307,6 @@ def _render_foreign(kind, rng, ppm):
 
 
 def render_random(rng, ppm=2.0, type_probs=None, text=None):
-    """Случайный знак. type_probs – вероятности type1/type1a/type1b/other."""
     probs = type_probs or {"type1": 0.25, "type1a": 0.3, "type1b": 0.3, "other": 0.15}
     t = rng.choice(list(probs), p=np.array(list(probs.values())) / sum(probs.values()))
     style = "stroke" if rng.random() < 0.75 else TTF_FONTS[int(rng.integers(0, len(TTF_FONTS)))]
