@@ -1,26 +1,3 @@
-"""Реальные кропы номеров для распознавателя (только обучение, в датасет не входят).
-
-Источник: AUTO.RIA Numberplate OCR RU (Nomeroff Net, https://nomeroff.net.ua/datasets/) –
-выровненные кропы однострочных знаков РФ (тип 1) с проверенным текстом.
-
-Из них строятся:
-  * type1  – кроп с небольшим случайным полем/поворотом -> лента 224x48;
-  * «псевдо-1А» – левая половина ленты «A123», правая – «BC» + регион, как у
-    выпрямленного двухстрочного знака (grz/rectify.py). Внешне такая лента мало
-    отличается от однострочной, поэтому метка типа для неё не задаётся (-1):
-    пример учит только чтение символов (CTC) на реальных текстурах.
-
-Второй источник (--options): AUTO.RIA Numberplate Options Dataset (CC BY 4.0) –
-кропы знаков с атрибутами «страна/тип» (region_id) и числом строк:
-  * РФ, 2 строки, текст по маске 1А          -> type1a (с повторами и шумом);
-  * РФ, 2 строки, иной текст (мото, прицепы) -> other;
-  * РФ, 1 строка                             -> type1;
-  * военные РФ и другие страны               -> other;
-  * «мусор» (count_lines = 0)                -> «не знак».
-
-python training/add_real_crops.py --src work/nomeroff/ocr_ru --out work/ocr_real --n1 30000 --n1a 10000
-python training/add_real_crops.py --options work/nomeroff/opts --out work/ocr_opts
-"""
 import argparse
 import glob
 import json
