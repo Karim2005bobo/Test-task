@@ -1,15 +1,3 @@
-"""Сбор кандидатов в реальную часть датасета с Wikimedia Commons.
-
-Обходит категории (с подкатегориями до заданной глубины), берёт метаданные
-файлов и оставляет только лицензии, совместимые с публикацией датасета под
-CC BY 4.0: CC0, Public Domain, CC BY (любой версии). SA/NC/ND отбрасываются.
-Результат – JSONL с URL, автором, лицензией и ссылкой на страницу файла
-(для полей source/license в meta.csv). Запросы идут с паузами, по правилам API.
-
-python tools/commons_collect.py --out work/commons/candidates.jsonl --depth 3 \
-    "Taxis in Russia" "Marshrutka in Russia" "Automobiles in Vladivostok"
-python tools/commons_collect.py --download work/commons/candidates.jsonl --img-dir work/commons/img
-"""
 import argparse
 import json
 import os
