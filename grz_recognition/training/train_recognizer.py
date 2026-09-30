@@ -1,7 +1,3 @@
-"""Обучение распознавателя (CTC + классификация типа) на подготовленных кропах.
-
-python training/train_recognizer.py --data work/ocr --out work/rec --epochs 12
-"""
 import argparse
 import os
 import sys
@@ -15,13 +11,12 @@ from torch.utils.data import DataLoader, Dataset
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from grz.plate_format import encode  # noqa: E402
-from grz.recognizer import greedy_decode  # noqa: E402
-from training.model import PlateNet  # noqa: E402
+from grz.plate_format import encode 
+from grz.recognizer import greedy_decode  
+from training.model import PlateNet  
 
 
 class ConcatX:
-    """Индексация по нескольким memmap-массивам как по одному."""
 
     def __init__(self, parts):
         self.parts = parts
@@ -146,7 +141,6 @@ def main():
             if step % 100 == 0:
                 print(f"ep {ep} step {step}/{steps} loss {loss.item():.4f} {(time.time() - t0) / (step - ep * len(tr)):.3f}s/it", flush=True)
             if step % 200 == 0:
-                # промежуточный чекпойнт: переживает перезапуск машины посреди эпохи
                 torch.save({"model": model.state_dict(), "width": args.width, "epoch": ep, "step": step},
                            os.path.join(args.out, "step.pt"))
             if args.max_steps and step >= args.max_steps:
