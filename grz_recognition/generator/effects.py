@@ -1,15 +1,7 @@
-"""Аугментации, имитирующие реальные условия съёмки: грязь, блики, тени,
-ночь, дождь, снег, смаз, сжатие JPEG. Каждая функция детерминирована
-относительно переданного генератора случайных чисел rng.
-"""
 import cv2
 import numpy as np
 
-
-# ------------------------------------------------------------- на знаке
-
 def plate_dirt(img, rng, strength=None):
-    """Пятна грязи/пыли: полупрозрачные коричнево-серые кляксы."""
     h, w = img.shape[:2]
     s = strength if strength is not None else rng.uniform(0.2, 0.7)
     layer = np.zeros((h, w), np.float32)
@@ -17,7 +9,6 @@ def plate_dirt(img, rng, strength=None):
         c = (int(rng.integers(0, w)), int(rng.integers(0, h)))
         ax = (int(rng.uniform(0.02, 0.25) * w), int(rng.uniform(0.05, 0.5) * h))
         cv2.ellipse(layer, c, ax, float(rng.uniform(0, 180)), 0, 360, float(rng.uniform(0.3, 1)), -1)
-    # нижняя кромка знака обычно грязнее
     grad = np.linspace(0, 1, h, dtype=np.float32)[:, None] ** 2
     layer = np.clip(layer + grad * rng.uniform(0, 0.8), 0, 1)
     layer = cv2.GaussianBlur(layer, (0, 0), max(1.0, w / 80))
@@ -28,7 +19,6 @@ def plate_dirt(img, rng, strength=None):
 
 
 def plate_glare(img, rng):
-    """Блик: яркое размытое пятно, частично «засвечивающее» символы."""
     h, w = img.shape[:2]
     layer = np.zeros((h, w), np.float32)
     c = (int(rng.integers(0, w)), int(rng.integers(0, h)))
@@ -39,7 +29,6 @@ def plate_glare(img, rng):
 
 
 def plate_shadow(img, rng):
-    """Резкая или мягкая тень (от рамки, бампера, веток)."""
     h, w = img.shape[:2]
     mask = np.zeros((h, w), np.float32)
     pts = rng.uniform([-0.2 * w, -0.2 * h], [1.2 * w, 1.2 * h], (int(rng.integers(3, 6)), 2)).astype(np.int32)
@@ -51,14 +40,12 @@ def plate_shadow(img, rng):
 
 
 def plate_fade(img, rng):
-    """Выцветание/износ краски: снижение контраста."""
     k = rng.uniform(0.55, 0.9)
     m = img.mean(axis=(0, 1), keepdims=True)
     return np.clip(m + (img.astype(np.float32) - m) * k, 0, 255).astype(np.uint8)
 
 
 def degrade_plate(img, rng):
-    """Возвращает (изображение знака, список условий: dirt, glare)."""
     cond = []
     if rng.random() < 0.35:
         img = plate_dirt(img, rng)
@@ -72,16 +59,12 @@ def degrade_plate(img, rng):
         cond.append("glare")
     return img, cond
 
-
-# ------------------------------------------------------------- на кадре
-
 def night(img, rng):
     f = rng.uniform(0.15, 0.45)
     out = img.astype(np.float32) * f
-    out[..., 0] *= rng.uniform(0.9, 1.3)   # холодный/жёлтый оттенок освещения
+    out[..., 0] *= rng.uniform(0.9, 1.3)  
     out[..., 2] *= rng.uniform(0.9, 1.3)
     h, w = img.shape[:2]
-    # пятна освещения (фонари, фары, подсветка номера)
     for _ in range(int(rng.integers(1, 4))):
         layer = np.zeros((h, w), np.float32)
         c = (int(rng.integers(0, w)), int(rng.integers(0, h)))
@@ -134,7 +117,7 @@ def color_jitter(img, rng):
     out = out * rng.uniform(0.7, 1.3) + rng.uniform(-30, 30)
     out = out * rng.uniform(0.9, 1.1, 3)
     gray = out.mean(axis=2, keepdims=True)
-    out = gray + (out - gray) * rng.uniform(0.6, 1.3)   # насыщенность
+    out = gray + (out - gray) * rng.uniform(0.6, 1.3) 
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
@@ -149,7 +132,6 @@ def noise(img, rng):
 
 
 def degrade_scene(img, rng):
-    """Возвращает (изображение, список условий съёмки для meta.csv)."""
     cond = []
     r = rng.random()
     if r < 0.2:
