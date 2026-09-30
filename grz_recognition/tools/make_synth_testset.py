@@ -1,10 +1,3 @@
-"""Отложенный синтетический тест в формате отладочного набора (image;plate_num;plate_type;is_vehicle).
-
-Используется для сквозной проверки пайплайна, пока нет реальных данных.
-Seed должен отличаться от seed обучающих выборок.
-
-python tools/make_synth_testset.py --out work/testset --n 300 --seed 999 --carparts work/dl
-"""
 import argparse
 import csv
 import os
