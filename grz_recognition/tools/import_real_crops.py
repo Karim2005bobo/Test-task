@@ -1,20 +1,3 @@
-"""Импорт реальных кропов знаков из открытых датасетов (CC BY 4.0) в реальную часть датасета.
-
-Источники:
-  * AUTO.RIA Numberplate Options Dataset 2021-09-03 (Nomeroff Net, ARS Online OU),
-    https://nomeroff.net.ua/datasets/ – CC BY 4.0. Текст и атрибуты (страна,
-    число строк) размечены и промодерированы авторами датасета;
-  * EU License Plates Images (Zenodo 3967850, SODALITE) – CC BY 4.0.
-
-Тип знака определяется так:
-  * РФ, 2 строки, текст по маске Л ЦЦЦ ЛЛ + регион  -> type1a;
-  * РФ, 1 строка, текст по той же маске            -> type1;
-  * РФ, 2 строки, иной текст (мотоциклы, прицепы), военные РФ, другие страны -> other.
-Кроп – это сам знак, поэтому quad – углы изображения. Поле conditions
-оценивается по яркости (day/night) – в source это указано.
-
-python tools/import_real_crops.py --options work/nomeroff/opts --eu work/eu/eu-license-plates --dataset dataset
-"""
 import argparse
 import csv
 import glob
