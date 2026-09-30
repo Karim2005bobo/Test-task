@@ -1,12 +1,3 @@
-"""Дообучение детектора YOLO11n-pose (4 угла знака, 2 класса компоновки).
-
-Данные: выход generator.generate_dataset --format yolo (синтетика) и, при
-наличии, реальная часть датасета (см. --real-dataset: конвертируется в тот же
-формат). Исходные веса yolo11n-pose.pt (COCO-pose, AGPL-3.0) скачиваются
-скриптом training/download_assets.sh.
-
-python training/train_detector.py --data work/det/data.yaml --epochs 30 --device 0
-"""
 import argparse
 import csv
 import os
@@ -22,7 +13,6 @@ from generator.generate_dataset import yolo_line  # noqa: E402
 
 
 def add_real(dataset_dir, det_dir, val_every=5):
-    """Добавляет реальные изображения датасета в выборку детектора (компоновка по типу/пропорциям)."""
     rows = {}
     with open(os.path.join(dataset_dir, "meta.csv"), encoding="utf-8") as f:
         for r in csv.DictReader(f, delimiter=";"):
