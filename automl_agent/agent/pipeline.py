@@ -52,7 +52,7 @@ def greedy_blend(val_preds: list[np.ndarray], y, metric, task, steps=25):
 
 def run(config: Config):
     log.info("config: data=%s out=%s budget=%.0fs", config.data_dir, config.output_path, config.time_budget)
-    train, test, spec = load_task(config.data_dir)
+    train, test, spec = load_task(config.data_dir, config.statement)
     feats = spec.cat_cols + spec.num_cols
     y_raw = train[spec.target]
     classes = spec.classes

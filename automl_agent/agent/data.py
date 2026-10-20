@@ -59,7 +59,7 @@ def detect_metric(text: str, task_type: str) -> str:
     return "rmse" if task_type == "regression" else "macro_f1"
 
 
-def load_task(data_dir: Path):
+def load_task(data_dir: Path, statement: str = ""):
     train = pd.read_csv(data_dir / "train.csv")
     test = pd.read_csv(data_dir / "test.csv")
     sub = pd.read_csv(data_dir / "sample_submission.csv", nrows=5)
@@ -87,7 +87,7 @@ def load_task(data_dir: Path):
     is_float = pd.api.types.is_float_dtype(y) and not np.all(np.mod(y.dropna(), 1) == 0)
     task_type = "regression" if (pd.api.types.is_numeric_dtype(y) and (is_float or n_unique > 50)) \
         else "classification"
-    description = read_statement(data_dir)
+    description = statement or read_statement(data_dir)
     metric = detect_metric(description, task_type)
 
     classes = None
@@ -134,16 +134,18 @@ def make_splits(train: pd.DataFrame, spec: TaskSpec, seed: int, n_val: int = 2):
                 splits.append((tr, va))
         if splits:
             return splits
+    if spec.task_type == "classification":
+        # stratified: two disjoint validation folds out of five (rare classes need enough support)
+        from sklearn.model_selection import StratifiedKFold
+        y = train[spec.target].values
+        counts = pd.Series(y).value_counts()
+        k = int(min(5, max(2, counts.min())))
+        skf = StratifiedKFold(k, shuffle=True, random_state=seed)
+        return [(np.sort(tr), np.sort(va)) for _, (tr, va) in zip(range(2), skf.split(np.zeros(n), y))]
     rng = np.random.RandomState(seed)
     perm = rng.permutation(n)
     cut = int(0.8 * n)
     tr, va = perm[:cut], perm[cut:]
-    if spec.task_type == "classification":
-        # keep every class present in training part
-        y = train[spec.target].values
-        missing = set(np.unique(y)) - set(np.unique(y[tr]))
-        for cls in missing:
-            tr = np.append(tr, np.where(y == cls)[0][:1])
     return [(np.sort(tr), np.sort(va))]
 
 

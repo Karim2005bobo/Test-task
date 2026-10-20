@@ -1,6 +1,7 @@
 # AutoResearch-агент для ML-задач (хакатон «Альфа Будущее»)
 
-Запуск: `python solution.py` — единая точка входа. Агент сам читает условие и данные, строит решение,
+Запуск: `python solution.py task.md` — единая точка входа (контракт из baseline.py: путь к task.md аргументом,
+пути к данным читаются из task.md относительно его каталога, `submission.csv` пишется рядом с task.md). Агент сам читает условие и данные, строит решение,
 улучшает его в цикле AutoResearch и пишет `submission.csv`.
 
 ## Архитектура
@@ -35,11 +36,13 @@ solution.py → agent/pipeline.py
 - **Память экспериментов.** История гипотез/результатов/ошибок передаётся в каждый запрос LLM;
   итог — `experiments.json` в рабочей папке.
 
-## Переменные окружения (`agent/config.py`)
-`DATA_DIR`, `OUTPUT_PATH`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `TIME_BUDGET_SEC`,
-`MAX_EXPERIMENTS`, `AGENT_WORKDIR`. Контракт платформы зафиксирован в organizers' `baseline.py`
-(в репозитории его нет) — имена переменных/путей нужно сверить и при необходимости поправить
-только в `config.py`.
+## Переменные окружения
+LLM — как в baseline.py: `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`. Опционально:
+`TIME_BUDGET_SEC` (по умолчанию 10800), `MAX_EXPERIMENTS`, `LLM_TOKEN_BUDGET`, `LLM_MAX_CALLS`,
+`AGENT_WORKDIR`. Среда: Python 3.12 и версии из requirements организаторов (проверено на
+pandas 2.2.3 / numpy 1.26.4 / lightgbm 4.6.0 / xgboost 2.1.4 / catboost 1.2.8 / sklearn 1.5.2).
 
 ## Результаты локальной проверки (задача 1, регрессия, forward-валидация, без LLM, бюджет 15 мин)
-baseline RMSE 45.54 → log1p-таргет 43.93 → бленд 42.79 (валидация на периоде 5).
+Регрессия (forward-валидация, периоды 4–5): baseline RMSE 45.54 → log1p-таргет 43.93 → бленд 42.79.
+Классификация UNSW-NB15 (стратифицированная валидация): baseline Macro-F1 0.603 → бленд 0.612 →
+после подбора весов классов 0.663. Оба прогона — без LLM, бюджет 15–25 мин вместо 3 ч.

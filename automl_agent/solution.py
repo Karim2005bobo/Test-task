@@ -1,4 +1,4 @@
-"""Single entry point for the platform: `python solution.py`.
+"""Single entry point for the platform: `python solution.py [task.md]`.
 
 Reads the task files, runs the autonomous research agent and writes submission.csv.
 """
@@ -15,7 +15,7 @@ from agent.pipeline import run  # noqa: E402
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    run(Config.from_env())
+    run(Config.from_env(sys.argv[1] if len(sys.argv) > 1 else None))
 
 
 if __name__ == "__main__":

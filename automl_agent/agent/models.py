@@ -33,6 +33,8 @@ def fit_predict(model, params, task, Xtr, ytr, Xva, yva, Xouts, n_classes, seed,
     Returns (list of predictions for each X in Xouts, number of iterations used).
     Regression -> 1-D array, classification -> (n, n_classes) probabilities.
     """
+    if model == "catboost":
+        max_iter = min(max_iter, 1500)   # keep multiclass CatBoost inside the experiment time limit
     p = {**default_params(model), **(params or {})}
     cls = task == "classification"
     cats = _cat_names(Xtr)

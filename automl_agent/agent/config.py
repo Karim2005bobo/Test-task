@@ -8,6 +8,8 @@ is the only module that has to be adapted.
 from __future__ import annotations
 
 import os
+import re
+import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,6 +43,35 @@ def find_data_dir(start: str | None = None) -> Path:
     raise FileNotFoundError("train.csv not found; set DATA_DIR")
 
 
+def locate_task(arg: str | None):
+    """Platform contract (see baseline.py): `solution.py task.md`; paths inside task.md are relative to
+    the directory of task.md, which is also the cwd and the place for submission.csv.
+    Returns (md_dir, statement_text, data_dir)."""
+    md = Path(arg) if arg else Path("task.md")
+    if not md.is_absolute():
+        md = Path.cwd() / md
+    if md.is_dir():
+        found = sorted(md.glob("*.md"))
+        md = found[0] if found else md / "task.md"
+    md_dir = md.parent
+    text = md.read_text(encoding="utf-8") if md.is_file() else ""
+    data_dir = None
+    for m in re.finditer(r"([\w./-]*train\.csv)", text):
+        cand = (md_dir / m.group(1)).parent
+        if (cand / "train.csv").exists():
+            data_dir = cand
+            break
+    if data_dir is None:
+        for g in ("train.csv", "*/train.csv", "*/*/train.csv"):
+            hit = sorted(md_dir.glob(g))
+            if hit:
+                data_dir = hit[0].parent
+                break
+    if data_dir is None:
+        data_dir = find_data_dir()
+    return md_dir, text, data_dir
+
+
 @dataclass
 class Config:
     data_dir: Path
@@ -58,6 +89,7 @@ class Config:
     llm_token_budget: int = 150_000
     llm_max_calls: int = 30
     llm_timeout: float = 120.0
+    statement: str = ""
     start_time: float = field(default_factory=time.time)
 
     @property
@@ -71,19 +103,21 @@ class Config:
         return (time.time() - self.start_time) / self.time_budget
 
     @classmethod
-    def from_env(cls) -> "Config":
-        data_dir = find_data_dir()
+    def from_env(cls, task_arg: str | None = None) -> "Config":
+        md_dir, statement, data_dir = locate_task(task_arg)
         out = _first_env(OUTPUT_ENV)
         if out:
             output = Path(out)
         else:
             out_dir = _first_env(OUTPUT_DIR_ENV)
-            output = (Path(out_dir) if out_dir else data_dir) / "submission.csv"
+            output = (Path(out_dir) if out_dir else md_dir) / "submission.csv"
         workdir = Path(os.environ.get("AGENT_WORKDIR", "/tmp/automl_agent_work"))
+        shutil.rmtree(workdir, ignore_errors=True)   # never reuse artefacts of a previous task/run
         workdir.mkdir(parents=True, exist_ok=True)
         output.parent.mkdir(parents=True, exist_ok=True)
         return cls(
             data_dir=data_dir,
+            statement=statement,
             output_path=output,
             workdir=workdir,
             time_budget=float(os.environ.get("TIME_BUDGET_SEC", 3 * 3600)),

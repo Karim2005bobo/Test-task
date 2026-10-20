@@ -66,7 +66,7 @@ class LLM:
             usage = data.get("usage") or {}
             self.tokens_used += int(usage.get("total_tokens") or (len(system) + len(user)) // 3)
             self.failures = 0
-            return data["choices"][0]["message"]["content"]
+            return data["choices"][0]["message"].get("content") or ""
         except Exception as e:  # network, auth, quota, malformed reply
             self.failures += 1
             log.warning("LLM call failed (%s): %s", self.failures, e)
