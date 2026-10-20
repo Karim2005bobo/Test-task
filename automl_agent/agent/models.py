@@ -55,7 +55,7 @@ def fit_predict(model, params, task, Xtr, ytr, Xva, yva, Xouts, n_classes, seed,
         conv = lambda X: X.assign(**{c: X[c].astype(str) for c in cats})
         Xtr_, Xva_ = conv(Xtr), (conv(Xva) if Xva is not None else None)
         Xouts = [conv(X) for X in Xouts]
-        base = dict(iterations=n_est, thread_count=NCPU, verbose=0, random_seed=seed,
+        base = dict(iterations=n_est, thread_count=NCPU, verbose=0, random_seed=seed, allow_writing_files=False,
                     cat_features=cats, **p)
         if es:
             base.update(early_stopping_rounds=patience)
