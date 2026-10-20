@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -68,7 +69,13 @@ def locate_task(arg: str | None):
                 data_dir = hit[0].parent
                 break
     if data_dir is None:
-        data_dir = find_data_dir()
+        try:
+            data_dir = find_data_dir()
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"train.csv не найден. Искал рядом с task.md: {md_dir} (task.md {'найден' if md.is_file() else 'НЕ найден'}). "
+                "Запустите из папки с task.md и данными или укажите путь: python solution.py путь\\к\\task.md "
+                "(либо задайте переменную DATA_DIR).") from None
     return md_dir, text, data_dir
 
 
@@ -111,7 +118,7 @@ class Config:
         else:
             out_dir = _first_env(OUTPUT_DIR_ENV)
             output = (Path(out_dir) if out_dir else md_dir) / "submission.csv"
-        workdir = Path(os.environ.get("AGENT_WORKDIR", "/tmp/automl_agent_work"))
+        workdir = Path(os.environ.get("AGENT_WORKDIR", os.path.join(tempfile.gettempdir(), "automl_agent_work")))
         shutil.rmtree(workdir, ignore_errors=True)   # never reuse artefacts of a previous task/run
         workdir.mkdir(parents=True, exist_ok=True)
         output.parent.mkdir(parents=True, exist_ok=True)
