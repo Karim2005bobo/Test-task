@@ -15,7 +15,8 @@ from agent.pipeline import run  # noqa: E402
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    run(Config.from_env(" ".join(sys.argv[1:]) or None   # tolerate unquoted paths with spaces))
+    # tolerate unquoted paths with spaces
+    run(Config.from_env(" ".join(sys.argv[1:]) or None))
 
 
 if __name__ == "__main__":
